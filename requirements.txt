@@ -1,5 +1,6 @@
 fastapi[standard]==0.141.1
 pydantic-settings==2.6.1
+gunicorn==23.0.0
 
 sqlalchemy[asyncio]==2.0.36
 asyncpg==0.30.0
