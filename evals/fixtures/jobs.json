@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1, "title": "Data Scientist",
+    "description": "Looking for a Data Scientist with Python, pandas, scikit-learn experience to build churn prediction models and ETL pipelines. 1-3 years experience.",
+    "experience_required": "2", "location": "Bangalore, India", "company": "Acme Corp",
+    "platform": "fixture", "url": "https://example.test/jobs/1", "easy_apply": false, "posted_at": "2026-08-01"
+  },
+  {
+    "id": 2, "title": "Machine Learning Engineer",
+    "description": "ML Engineer role: deploy PyTorch models via FastAPI, build production ML pipelines on AWS. 2+ years experience with Docker.",
+    "experience_required": "2", "location": "Bangalore, India", "company": "Beta Labs",
+    "platform": "fixture", "url": "https://example.test/jobs/2", "easy_apply": false, "posted_at": "2026-08-01"
+  },
+  {
+    "id": 3, "title": "Senior LLM Production Engineer",
+    "description": "10+ years experience required. Deep expertise in distributed training of large language models, CUDA kernel optimization, and multi-node inference serving.",
+    "experience_required": "10", "location": "Bangalore, India", "company": "Gamma AI",
+    "platform": "fixture", "url": "https://example.test/jobs/3", "easy_apply": false, "posted_at": "2026-08-01"
+  },
+  {
+    "id": 4, "title": "Substation Design Engineer",
+    "description": "Electrical substation design, load flow analysis, protection coordination. Requires B.Tech Electrical, 3+ years in power systems.",
+    "experience_required": "3", "location": "Delhi, India", "company": "Delta Power",
+    "platform": "fixture", "url": "https://example.test/jobs/4", "easy_apply": false, "posted_at": "2026-08-01"
+  },
+  {
+    "id": 5, "title": "AI/ML Intern",
+    "description": "Internship: assist with data cleaning, basic scikit-learn models, and dashboard building. Great for entry-level candidates with Python skills.",
+    "experience_required": "0", "location": "Bangalore, India", "company": "Epsilon Startups",
+    "platform": "fixture", "url": "https://example.test/jobs/5", "easy_apply": false, "posted_at": "2026-08-01"
+  }
+]

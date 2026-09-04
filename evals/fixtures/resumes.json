@@ -1,0 +1,6 @@
+[
+  {
+    "id": 1,
+    "content": "Jane Doe\nB.Tech, Computer Science\n\nSKILLS\nPython, SQL, pandas, scikit-learn, PyTorch, FastAPI, Docker, AWS\n\nEXPERIENCE\nData Scientist, Acme Analytics (2022-2024)\n- Built churn-prediction models using XGBoost, deployed via FastAPI\n- Built ETL pipelines processing 50k+ records/day\n\nPROJECTS\n- Customer churn classifier: Random Forest + SHAP, 82% accuracy"
+  }
+]

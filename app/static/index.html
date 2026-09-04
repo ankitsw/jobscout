@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JobScout</title>
+  <style>
+    :root { color-scheme: light; font-family: Georgia, serif; color: #18212b; background: #f3efe6; }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 80% 10%, #d9e9e1, transparent 35%), #f3efe6; }
+    main { width: min(880px, calc(100% - 32px)); margin: 0 auto; padding: 72px 0 48px; }
+    h1 { font-size: clamp(3rem, 9vw, 7rem); line-height: .9; letter-spacing: -0.04em; margin: 0 0 18px; font-weight: 500; }
+    .lede { max-width: 540px; font: 1.1rem/1.5 system-ui, sans-serif; color: #50606d; }
+    .chat { margin-top: 52px; border-top: 1px solid #b7b7aa; padding-top: 18px; }
+    textarea { width: 100%; min-height: 130px; box-sizing: border-box; border: 1px solid #aeb5ad; background: #fffdf8; padding: 16px; font: 1rem/1.5 system-ui, sans-serif; resize: vertical; }
+    button { margin-top: 12px; border: 0; background: #173e3a; color: white; padding: 12px 18px; font: 600 .95rem system-ui, sans-serif; cursor: pointer; }
+    #answer { white-space: pre-wrap; margin-top: 24px; padding: 20px; background: #fffdf8; font: 1rem/1.55 system-ui, sans-serif; min-height: 24px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>JobScout</h1>
+    <p class="lede">Search your collected openings, compare them with your resume, and prepare thoughtful applications from one quiet workspace.</p>
+    <section class="chat" aria-label="JobScout chat">
+      <textarea id="message" placeholder="What should we look for today?"></textarea>
+      <button id="send" type="button">Ask JobScout</button>
+      <div id="answer" aria-live="polite"></div>
+    </section>
+  </main>
+  <script>
+    const message = document.querySelector('#message');
+    const answer = document.querySelector('#answer');
+    document.querySelector('#send').addEventListener('click', async () => {
+      const text = message.value.trim();
+      if (!text) return;
+      answer.textContent = 'Thinking...';
+      try {
+        const response = await fetch('/agent/chat', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({message: text}) });
+        const data = await response.json();
+        answer.textContent = data.response || data.detail || 'No response.';
+      } catch (error) {
+        answer.textContent = 'The assistant is unavailable right now.';
+      }
+    });
+  </script>
+</body>
+</html>

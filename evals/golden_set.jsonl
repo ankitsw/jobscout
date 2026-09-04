@@ -1,0 +1,5 @@
+{"id": "p001", "resume_id": 1, "job_id": 1, "label": 2, "note": "direct skill match: Python, pandas, scikit-learn, churn modeling"}
+{"id": "p002", "resume_id": 1, "job_id": 2, "label": 2, "note": "FastAPI/Docker/AWS overlap, ML engineering adjacent to data science background"}
+{"id": "p003", "resume_id": 1, "job_id": 3, "label": 0, "note": "10+ years and CUDA/distributed-training specialization, resume shows neither"}
+{"id": "p004", "resume_id": 1, "job_id": 4, "label": 0, "note": "unrelated domain — electrical power systems, not data/ML"}
+{"id": "p005", "resume_id": 1, "job_id": 5, "label": 1, "note": "skills overlap but candidate is overqualified for an internship"}
