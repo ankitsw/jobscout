@@ -27,6 +27,12 @@ class Company(Base):
     tech_stack: Mapped[list[str]] = mapped_column(JSONB, default=list)
     culture_signals: Mapped[str] = mapped_column(Text, default="")
     source: Mapped[str] = mapped_column(Text, default="web_search")
+    classification: Mapped[str] = mapped_column(Text, default="")
+    ambitionbox_rating: Mapped[float | None] = mapped_column(Float, nullable=True)
+    ambitionbox_reviews_count: Mapped[int | None] = mapped_column(nullable=True)
+    # Raw per-role salary bands from AmbitionBox for this company, matched
+    # against a specific job title on demand rather than re-fetched each time.
+    ambitionbox_job_profiles: Mapped[list[dict]] = mapped_column(JSONB, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

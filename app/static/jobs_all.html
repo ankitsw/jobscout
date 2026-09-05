@@ -265,6 +265,21 @@
         margin-bottom: 6px;
       }
 
+      #companyTooltip .tt-rating {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        color: var(--accent-strong);
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      #companyTooltip .tt-rating-source {
+        color: var(--muted);
+        font-weight: 400;
+        font-size: 0.78rem;
+      }
+
       #companyTooltip .tt-row {
         display: flex;
         gap: 6px;
@@ -420,16 +435,21 @@
           return `<div class="tt-name">${escapeHtml(name)}</div><div class="tt-loading">Looking up company info&hellip;</div>`;
         }
         const facts = [
+          ['Industry', profile.classification],
           ['Size', profile.size],
           ['Founded', profile.founded],
           ['HQ', profile.headquarters],
         ].filter(([, value]) => value);
 
-        const hasAnything = facts.length || profile.description || (profile.tech_stack || []).length;
+        const hasAnything = facts.length || profile.description || (profile.tech_stack || []).length
+          || profile.ambitionbox_rating != null;
         if (!hasAnything) {
           return `<div class="tt-name">${escapeHtml(name)}</div><div class="tt-loading">No additional company info found.</div>`;
         }
 
+        const ratingHtml = profile.ambitionbox_rating != null
+          ? `<div class="tt-rating">&#9733; ${profile.ambitionbox_rating.toFixed(1)} <span class="tt-rating-source">AmbitionBox${profile.ambitionbox_reviews_count ? ` &middot; ${profile.ambitionbox_reviews_count.toLocaleString()} reviews` : ''}</span></div>`
+          : '';
         const factsHtml = facts.map(([label, value]) => `
           <div class="tt-row"><strong>${label}:</strong> ${escapeHtml(value)}</div>
         `).join('');
@@ -440,7 +460,7 @@
           ? `<p class="tt-desc">${escapeHtml(profile.description)}</p>`
           : '';
 
-        return `<div class="tt-name">${escapeHtml(name)}</div>${factsHtml}${techHtml}${descHtml}`;
+        return `<div class="tt-name">${escapeHtml(name)}</div>${ratingHtml}${factsHtml}${techHtml}${descHtml}`;
       }
 
       function positionTooltip(cell) {

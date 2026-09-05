@@ -6,7 +6,7 @@ from sqlalchemy import select
 from app.config import settings
 from app.services.database import AsyncSessionLocal
 from app.models.job import Job
-from app.services.scraper import LinkedInSource, fetch_description
+from app.services.scraper import LinkedInSource, fetch_job_details
 from app.services.indeed_scraper import IndeedSource
 from app.services.sources.ats import ATSSource
 from app.services.sources.base import JobSource
@@ -135,7 +135,8 @@ async def scrape_jobs() -> int:
                 if existing.scalars().first():
                     continue
                 if job_data.get("platform") == "linkedin" and not (job_data.get("description") or "").strip():
-                    job_data["description"] = await fetch_description(linkedin_client, job_data["url"])
+                    details = await fetch_job_details(linkedin_client, job_data["url"])
+                    job_data["description"] = details.get("description", "")
                     await asyncio.sleep(_LINKEDIN_DESCRIPTION_DELAY_SECONDS)
                 job_text = f"{job_data.get('title', '')}\n{job_data.get('description', '')}"
                 job_data["embedding"] = embed(job_text)

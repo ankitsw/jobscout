@@ -1,9 +1,23 @@
+import html
+import json
 import re
 import httpx
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 
 from app.services.sources.base import JobSource
+
+_JOB_POSTING_JSONLD_RE = re.compile(
+    r'<script type="application/ld\+json">(.*?)</script>', re.DOTALL
+)
+
+
+def _clean_jsonld_description(raw: str) -> str:
+    # LinkedIn's JSON-LD description is rich text: HTML tags with entities
+    # double-escaped inside the JSON string (e.g. "&lt;strong&gt;"). Unescape
+    # once to get real HTML, then strip tags down to plain text.
+    unescaped = html.unescape(raw)
+    return BeautifulSoup(unescaped, "html.parser").get_text(separator="\n").strip()
 
 
 # Work type filters
@@ -32,23 +46,30 @@ EXPERIENCE_LEVEL = {
 }
 
 
-async def fetch_description(client: httpx.AsyncClient, job_url: str) -> str:
-    match = re.search(r"-(\d+)(?:\?|$)", job_url)
-    if not match:
-        return ""
-    job_id = match.group(1)
+async def fetch_job_details(client: httpx.AsyncClient, job_url: str) -> dict:
+    """Fetch a job's own posting page and read its embedded schema.org
+    JobPosting JSON-LD. This is the same public page LinkedIn serves for SEO,
+    so it doesn't get rate-limited the way the jobs-guest AJAX API does, and
+    parsing one JSON blob is more robust than matching a CSS class that can
+    change. Also surfaces the hiring company's LinkedIn industry tag as a
+    free classification signal.
+    """
+    if not job_url:
+        return {}
     try:
-        resp = await client.get(
-            f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}",
-            headers={"User-Agent": "Mozilla/5.0"},
-        )
+        resp = await client.get(job_url, headers={"User-Agent": "Mozilla/5.0"})
         if resp.status_code != 200:
-            return ""
-        soup = BeautifulSoup(resp.text, "html.parser")
-        desc_el = soup.find("div", class_="description__text")
-        return desc_el.get_text(separator="\n").strip() if desc_el else ""
+            return {}
+        match = _JOB_POSTING_JSONLD_RE.search(resp.text)
+        if not match:
+            return {}
+        data = json.loads(match.group(1))
+        return {
+            "description": _clean_jsonld_description(data.get("description") or ""),
+            "industry": (data.get("industry") or "").strip(),
+        }
     except Exception:
-        return ""
+        return {}
 
 
 async def fetch_jobs(

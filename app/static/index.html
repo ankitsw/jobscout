@@ -296,9 +296,28 @@
 
       .mini-grid {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 12px;
         margin-top: 10px;
+      }
+
+      .company-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 6px;
+      }
+
+      .rating-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--accent-strong);
+        background: var(--accent-soft);
       }
 
       .mini-tile {
@@ -437,6 +456,7 @@
         .panel { overflow: visible; }
         .job-list { overflow: visible; flex: none; }
         .detail-panel { overflow: visible; }
+        .mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .chat-thread { flex: none; max-height: 400px; }
       }
     </style>
@@ -472,6 +492,10 @@
             <div>
               <div class="muted" id="detailCompany">Select a job</div>
               <h2 id="detailTitle">No job selected</h2>
+              <div class="company-meta" id="detailCompanyMeta" hidden>
+                <span class="chip" id="detailClassification" hidden></span>
+                <span class="rating-chip" id="detailRating" hidden></span>
+              </div>
             </div>
             <div class="score" id="detailScore">--</div>
           </div>
@@ -495,6 +519,10 @@
               <div class="mini-tile">
                 <div class="tiny-label">Platform</div>
                 <div id="detailPlatform">—</div>
+              </div>
+              <div class="mini-tile">
+                <div class="tiny-label">Est. Salary</div>
+                <div id="detailSalary">—</div>
               </div>
             </div>
           </div>
@@ -554,6 +582,10 @@
       const detailLocationEl = document.getElementById('detailLocation');
       const detailExperienceEl = document.getElementById('detailExperience');
       const detailPlatformEl = document.getElementById('detailPlatform');
+      const detailSalaryEl = document.getElementById('detailSalary');
+      const detailCompanyMetaEl = document.getElementById('detailCompanyMeta');
+      const detailClassificationEl = document.getElementById('detailClassification');
+      const detailRatingEl = document.getElementById('detailRating');
       const detailDescriptionEl = document.getElementById('detailDescription');
       const resumeSelectEl = document.getElementById('resumeSelect');
       const jobSearchEl = document.getElementById('jobSearch');
@@ -638,11 +670,45 @@
         }
       }
 
-      const companyDescriptionCache = new Map();
+      const companyProfileCache = new Map();
+      const salaryEstimateCache = new Map();
+
+      function formatLakhs(value) {
+        return `₹${(value / 100000).toFixed(1)}L`;
+      }
+
+      async function fetchCompanyProfile(companyName) {
+        if (!companyName) return null;
+        if (companyProfileCache.has(companyName)) return companyProfileCache.get(companyName);
+        let profile = null;
+        try {
+          const response = await fetch(`/jobs/company-research?name=${encodeURIComponent(companyName)}`);
+          profile = response.ok ? await response.json() : null;
+        } catch (error) {
+          profile = null;
+        }
+        companyProfileCache.set(companyName, profile);
+        return profile;
+      }
+
+      async function fetchSalaryEstimate(companyName, jobTitle) {
+        const cacheKey = `${companyName}::${jobTitle}`;
+        if (salaryEstimateCache.has(cacheKey)) return salaryEstimateCache.get(cacheKey);
+        let estimate = null;
+        try {
+          const response = await fetch(`/jobs/salary-estimate?company=${encodeURIComponent(companyName)}&title=${encodeURIComponent(jobTitle)}`);
+          estimate = response.ok ? await response.json() : null;
+        } catch (error) {
+          estimate = null;
+        }
+        salaryEstimateCache.set(cacheKey, estimate);
+        return estimate;
+      }
 
       async function selectJob(jobId) {
         const job = state.jobs.find((item) => Number(item.id) === Number(jobId));
         if (!job) return;
+        const isStillSelected = () => Number(state.selectedJobId) === Number(jobId);
 
         detailCompanyEl.textContent = job.company || 'Company';
         detailTitleEl.textContent = job.title || 'Untitled role';
@@ -650,36 +716,47 @@
         detailLocationEl.textContent = job.location || 'Remote';
         detailExperienceEl.textContent = job.experience_required || 'Not specified';
         detailPlatformEl.textContent = job.platform || 'Platform';
+        detailSalaryEl.textContent = '—';
+        detailCompanyMetaEl.hidden = true;
+        detailClassificationEl.hidden = true;
+        detailRatingEl.hidden = true;
 
         const jobDescription = (job.description || '').trim();
-        if (jobDescription) {
-          detailDescriptionEl.textContent = jobDescription;
-          return;
-        }
+        detailDescriptionEl.textContent = jobDescription || 'Looking up the company…';
 
-        detailDescriptionEl.textContent = 'No job description available. Looking up the company instead…';
         const companyName = job.company || '';
-        if (!companyName) {
-          detailDescriptionEl.textContent = 'No description available.';
-          return;
-        }
+        const [profile, salary] = await Promise.all([
+          fetchCompanyProfile(companyName),
+          companyName && job.title ? fetchSalaryEstimate(companyName, job.title) : null,
+        ]);
+        if (!isStillSelected()) return; // user moved on to another job
 
-        let companyDescription = companyDescriptionCache.get(companyName);
-        if (companyDescription === undefined) {
-          try {
-            const response = await fetch(`/jobs/company-research?name=${encodeURIComponent(companyName)}`);
-            const profile = response.ok ? await response.json() : null;
-            companyDescription = (profile && profile.description) || '';
-          } catch (error) {
-            companyDescription = '';
+        if (profile) {
+          if (profile.classification) {
+            detailClassificationEl.textContent = profile.classification;
+            detailClassificationEl.hidden = false;
           }
-          companyDescriptionCache.set(companyName, companyDescription);
+          if (profile.ambitionbox_rating != null) {
+            const reviews = profile.ambitionbox_reviews_count
+              ? ` (${profile.ambitionbox_reviews_count.toLocaleString()} reviews)`
+              : '';
+            detailRatingEl.textContent = `★ ${profile.ambitionbox_rating.toFixed(1)}${reviews}`;
+            detailRatingEl.hidden = false;
+          }
+          detailCompanyMetaEl.hidden = detailClassificationEl.hidden && detailRatingEl.hidden;
         }
 
-        if (Number(state.selectedJobId) !== Number(jobId)) return; // user moved on to another job
-        detailDescriptionEl.textContent = companyDescription
-          ? `No job description available. About ${companyName}:\n\n${companyDescription}`
-          : 'No description available.';
+        if (!jobDescription) {
+          const companyDescription = (profile && profile.description) || '';
+          detailDescriptionEl.textContent = companyDescription
+            ? `No job description available. About ${companyName}:\n\n${companyDescription}`
+            : 'No description available.';
+        }
+
+        if (salary && salary.typical_min_ctc != null && salary.typical_max_ctc != null) {
+          detailSalaryEl.textContent = `${formatLakhs(salary.typical_min_ctc)} – ${formatLakhs(salary.typical_max_ctc)}`;
+          detailSalaryEl.title = `Based on AmbitionBox's "${salary.matched_title}" band at ${companyName} (${salary.data_points} data points)`;
+        }
       }
 
       function appendChatMessage(role, text) {
