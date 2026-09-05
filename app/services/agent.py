@@ -12,7 +12,7 @@ from langgraph.prebuilt import create_react_agent
 from langsmith import traceable
 from sqlalchemy import select, delete
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
-from ddgs import DDGS
+from tavily import AsyncTavilyClient
 from pydantic import SecretStr
 from app.config import settings
 from app.services.database import AsyncSessionLocal
@@ -120,9 +120,13 @@ async def match_resume() -> str:
 @tool
 async def search_web(query: str) -> str:
     """Search the web for company info, tech stack, culture, or recent news."""
+    if not settings.tavily_api_key:
+        return "Web search is not configured."
     try:
-        results = await asyncio.to_thread(lambda: list(DDGS().text(query, max_results=4)))
-        return json.dumps([{"title": r["title"], "body": r["body"][:300]} for r in (results or [])])
+        client = AsyncTavilyClient(api_key=settings.tavily_api_key)
+        response = await client.search(query=query, max_results=4, search_depth="basic")
+        results = response.get("results") or []
+        return json.dumps([{"title": r["title"], "body": r["content"][:300]} for r in results])
     except Exception as e:
         return f"Web search failed: {e}"
 

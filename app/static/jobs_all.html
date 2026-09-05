@@ -189,6 +189,30 @@
         white-space: nowrap;
       }
 
+      .chip.platform-linkedin { color: #2563a6; background: #e8f1fb; border-color: #cfe3f7; }
+      .chip.platform-indeed { color: #4d3fc4; background: #edeafb; border-color: #d9d2f6; }
+      .chip.platform-ats_greenhouse { color: #2f8f4e; background: #e9f7ee; border-color: #cdecd8; }
+      .chip.platform-ats_lever { color: #7c3fb0; background: #f4ecfa; border-color: #e5d3f2; }
+
+      .open-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        color: var(--text);
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: border-color 0.15s ease, background 0.15s ease;
+      }
+
+      .open-link:hover {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+
       .score {
         display: inline-flex;
         min-width: 46px;
@@ -284,6 +308,7 @@
               <th>Platform</th>
               <th>Posted</th>
               <th>Score</th>
+              <th>Link</th>
             </tr>
           </thead>
           <tbody id="jobsTableBody"></tbody>
@@ -323,6 +348,20 @@
         return Math.min(98, Math.max(65, Math.round(72 + (((job.title || '').length + (job.company || '').length) % 18))));
       }
 
+      const PLATFORM_LABELS = {
+        linkedin: 'LinkedIn',
+        indeed: 'Indeed',
+        ats_greenhouse: 'Greenhouse',
+        ats_lever: 'Lever',
+      };
+
+      function platformChip(job) {
+        const platform = job.platform || '';
+        const label = PLATFORM_LABELS[platform] || platform || 'Platform';
+        const cssClass = PLATFORM_LABELS[platform] ? `chip platform-${platform}` : 'chip';
+        return `<span class="${cssClass}">${escapeHtml(label)}</span>`;
+      }
+
       function renderTable() {
         const query = (searchEl.value || '').trim().toLowerCase();
         const rows = allJobs.filter((job) => {
@@ -332,7 +371,7 @@
         });
 
         if (!rows.length) {
-          tableBodyEl.innerHTML = `<tr><td colspan="6"><div class="empty-state">No jobs match the current search.</div></td></tr>`;
+          tableBodyEl.innerHTML = `<tr><td colspan="7"><div class="empty-state">No jobs match the current search.</div></td></tr>`;
           return;
         }
 
@@ -343,9 +382,10 @@
               <span class="company-name">${escapeHtml(job.company || 'Company')}</span>
             </td>
             <td>${escapeHtml(job.location || 'Remote')}</td>
-            <td><span class="chip">${escapeHtml(job.platform || 'Platform')}</span></td>
+            <td>${platformChip(job)}</td>
             <td>${formatDate(job.posted_at)}</td>
             <td><span class="score">${scoreFor(job)}%</span></td>
+            <td>${job.url ? `<a class="open-link" href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer" title="Open job posting" onclick="event.stopPropagation()">&#8599;</a>` : ''}</td>
           </tr>
         `).join('');
 

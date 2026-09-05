@@ -1,9 +1,8 @@
-import asyncio
 import json
 import logging
 from groq import AsyncGroq
 from pydantic import BaseModel, Field, ValidationError
-from ddgs import DDGS
+from tavily import AsyncTavilyClient
 from app.config import settings
 
 log = logging.getLogger(__name__)
@@ -34,18 +33,22 @@ If a field isn't findable in the search results, leave it as empty string or nul
 
 
 async def _search_company(company_name: str) -> str:
+    if not settings.tavily_api_key:
+        log.warning("no TAVILY_API_KEY configured; skipping company web search")
+        return ""
     try:
-        results = await asyncio.to_thread(
-            lambda: list(DDGS().text(
-                f"{company_name} company about size founded tech stack glassdoor",
-                max_results=4,
-            ))
+        client = AsyncTavilyClient(api_key=settings.tavily_api_key)
+        response = await client.search(
+            query=f"{company_name} company about size founded tech stack glassdoor",
+            max_results=4,
+            search_depth="basic",
         )
+        results = response.get("results") or []
         if not results:
             log.warning("company web search returned no results", extra={"company": company_name})
             return ""
         return "\n\n".join(
-            f"{r['title']}\n{r['body'][:300]}" for r in results
+            f"{r['title']}\n{r['content'][:400]}" for r in results
         )
     except Exception as e:
         log.warning("company web search failed", extra={"company": company_name, "error": repr(e)})

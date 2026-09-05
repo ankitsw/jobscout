@@ -42,7 +42,7 @@ This repo includes a [render.yaml](render.yaml) blueprint that provisions a mana
 2. In the Render dashboard, choose **New > Blueprint** and point it at the repo. Render reads `render.yaml` and provisions:
    - `jobscout-db` — a managed Postgres 16 database (free plan).
    - `jobscout-api` — a Docker web service built from `DockerFile`, wired to `jobscout-db` via `DATABASE_URL` (free plan).
-3. When prompted for the secret env vars (`API_KEY` is the only one required; `SMTP_EMAIL`, `SMTP_PASSWORD`, `ALERT_EMAIL`, `LANGSMITH_API_KEY`, `GOOGLE_SHEET_ID`, `GOOGLE_CREDENTIALS_PATH`, `DISCORD_WEBHOOK_URL`, and `SENTRY_DSN` are optional), fill in whichever integrations you're using and leave the rest blank.
+3. When prompted for the secret env vars (`API_KEY` is the only one required; `SMTP_EMAIL`, `SMTP_PASSWORD`, `ALERT_EMAIL`, `LANGSMITH_API_KEY`, `TAVILY_API_KEY`, `GOOGLE_SHEET_ID`, `GOOGLE_CREDENTIALS_PATH`, `DISCORD_WEBHOOK_URL`, and `SENTRY_DSN` are optional), fill in whichever integrations you're using and leave the rest blank. Without `TAVILY_API_KEY`, company research and the chat agent's web search tool return empty results instead of failing.
 4. Deploy. On boot, `docker-entrypoint.sh` runs `alembic upgrade head` (which also creates the `vector` extension) and then starts `uvicorn` on the port Render assigns.
 5. Once live, the chat UI is at the service's root URL and the API docs are at `/docs`.
 

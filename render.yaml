@@ -33,6 +33,8 @@ services:
         sync: false
       - key: ALERT_EMAIL
         sync: false
+      - key: TAVILY_API_KEY
+        sync: false
       - key: LANGSMITH_API_KEY
         sync: false
       - key: LANGSMITH_TRACING
