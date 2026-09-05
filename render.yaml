@@ -1,0 +1,49 @@
+databases:
+  - name: jobscout-db
+    databaseName: jobscout
+    user: jobscout
+    plan: free
+    postgresMajorVersion: 16
+
+services:
+  - type: web
+    name: jobscout-api
+    runtime: docker
+    dockerfilePath: ./DockerFile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: jobscout-db
+          property: connectionString
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: ATS_GREENHOUSE_BOARDS
+        value: gitlab,asana,discord
+      - key: ATS_LEVER_COMPANIES
+        value: palantir
+      - key: API_KEY
+        sync: false
+      - key: SMTP_EMAIL
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: ALERT_EMAIL
+        sync: false
+      - key: LANGSMITH_API_KEY
+        sync: false
+      - key: LANGSMITH_TRACING
+        sync: false
+      - key: LANGSMITH_PROJECT
+        sync: false
+      - key: GOOGLE_SHEET_ID
+        sync: false
+      - key: GOOGLE_CREDENTIALS_PATH
+        sync: false
+      - key: DISCORD_WEBHOOK_URL
+        sync: false
+      - key: SENTRY_DSN
+        sync: false

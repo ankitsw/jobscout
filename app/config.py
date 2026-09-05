@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -17,4 +18,17 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     ats_greenhouse_boards: str = "gitlab,asana,discord"
     ats_lever_companies: str = "palantir"
+
+    @field_validator("database_url")
+    @classmethod
+    def _use_asyncpg_driver(cls, v: str) -> str:
+        # Managed providers (Render, Heroku, etc.) hand out plain
+        # postgres:// / postgresql:// URLs. SQLAlchemy's async engine
+        # needs the asyncpg driver spelled out explicitly.
+        if v.startswith("postgres://"):
+            v = "postgresql://" + v[len("postgres://"):]
+        if v.startswith("postgresql://"):
+            v = "postgresql+asyncpg://" + v[len("postgresql://"):]
+        return v
+
 settings = Settings()
