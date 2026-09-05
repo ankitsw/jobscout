@@ -141,6 +141,14 @@ async def _extract_profile(company_name: str, raw_results: str) -> CompanyProfil
         return CompanyProfile(name=company_name)
 
 
+def _predates_ambitionbox_fields(row: Company) -> bool:
+    # Rows cached before classification/ambitionbox support existed have
+    # none of those fields set. Treat them as stale regardless of age so
+    # they pick up the richer data on the next lookup instead of serving
+    # an incomplete profile for a full cache cycle.
+    return not row.classification and row.ambitionbox_rating is None and not row.ambitionbox_job_profiles
+
+
 async def research_company(company_name: str, db: AsyncSession) -> CompanyProfile:
     """Look up cached company research first; only hit AmbitionBox/Tavily/Groq
     on a cache miss or when the cached row has gone stale."""
@@ -148,7 +156,7 @@ async def research_company(company_name: str, db: AsyncSession) -> CompanyProfil
     existing = await db.execute(select(Company).where(Company.lookup_key == lookup_key))
     row = existing.scalars().first()
 
-    if row and datetime.now(timezone.utc) - row.updated_at < _CACHE_MAX_AGE:
+    if row and not _predates_ambitionbox_fields(row) and datetime.now(timezone.utc) - row.updated_at < _CACHE_MAX_AGE:
         return _profile_from_row(row)
 
     ambitionbox_profile, raw_results = await asyncio.gather(
