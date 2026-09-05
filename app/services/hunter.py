@@ -110,20 +110,33 @@ async def scrape_jobs() -> int:
             for job_data in jobs_data:
                 if not _is_relevant(job_data.get("title", "")):
                     continue
-                posted_at = job_data.get("posted_at", "")
-                if posted_at:
+                # Sources return posted_at as "YYYY-MM-DD" (or nothing); the column
+                # is TIMESTAMPTZ, so normalise to an aware datetime or None.
+                posted_at = job_data.get("posted_at")
+                posted_date = None
+                if isinstance(posted_at, datetime):
+                    posted_date = posted_at if posted_at.tzinfo else posted_at.replace(tzinfo=timezone.utc)
+                elif isinstance(posted_at, str) and posted_at.strip():
                     try:
-                        posted_date = datetime.strptime(posted_at, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-                        if datetime.now(timezone.utc) - posted_date > timedelta(days=30):
-                            continue
+                        posted_date = datetime.strptime(posted_at.strip()[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
                     except ValueError:
-                        pass
+                        posted_date = None
+                if posted_date and datetime.now(timezone.utc) - posted_date > timedelta(days=30):
+                    continue
+                job_data["posted_at"] = posted_date
                 existing = await db.execute(select(Job).where(Job.url == job_data["url"]))
                 if existing.scalars().first():
                     continue
                 job_text = f"{job_data.get('title', '')}\n{job_data.get('description', '')}"
                 job_data["embedding"] = embed(job_text)
-                job_data["flagged"] = await is_likely_injection(job_text)
+                try:
+                    job_data["flagged"] = await is_likely_injection(job_text)
+                except Exception as e:  # noqa: BLE001 - classifier outage must not abort the scrape
+                    log.warning(
+                        "injection check failed; saving job unflagged",
+                        extra={"url": job_data.get("url"), "error": repr(e)},
+                    )
+                    job_data["flagged"] = False
                 job = Job(**job_data)
                 db.add(job)
                 new_jobs.append(job)
@@ -131,7 +144,7 @@ async def scrape_jobs() -> int:
                     "job_title": job.title,
                     "company": job.company,
                     "location": job.location,
-                    "posted_at": job.posted_at,
+                    "posted_at": job.posted_at.strftime("%Y-%m-%d") if job.posted_at else "-",
                     "job_url": job.url,
                     "match_score": "-",
                 })
