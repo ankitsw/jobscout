@@ -11,6 +11,16 @@ _JOB_POSTING_JSONLD_RE = re.compile(
     r'<script type="application/ld\+json">(.*?)</script>', re.DOTALL
 )
 
+# schema.org JobPosting.employmentType values LinkedIn actually uses, mapped
+# to the same job_type vocabulary hunter.py's text-based fallback produces.
+_EMPLOYMENT_TYPE_MAP = {
+    "FULL_TIME": "full_time",
+    "PART_TIME": "part_time",
+    "CONTRACTOR": "contract",
+    "TEMPORARY": "contract",
+    "INTERN": "internship",
+}
+
 
 def _clean_jsonld_description(raw: str) -> str:
     # LinkedIn's JSON-LD description is rich text: HTML tags with entities
@@ -64,9 +74,11 @@ async def fetch_job_details(client: httpx.AsyncClient, job_url: str) -> dict:
         if not match:
             return {}
         data = json.loads(match.group(1))
+        employment_type_raw = (data.get("employmentType") or "").split(",")[0].strip().upper()
         return {
             "description": _clean_jsonld_description(data.get("description") or ""),
             "industry": (data.get("industry") or "").strip(),
+            "job_type": _EMPLOYMENT_TYPE_MAP.get(employment_type_raw, ""),
         }
     except Exception:
         return {}

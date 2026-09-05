@@ -94,6 +94,27 @@ def _extract_experience(text: str) -> str:
     return ""
 
 
+# Greenhouse/Lever expose no employment-type field at all, and LinkedIn's own
+# JobPosting JSON-LD is missing it on some listings — this text fallback
+# covers both. Checked most-specific-first so "internship" doesn't get
+# swallowed by a looser pattern.
+_JOB_TYPE_PATTERNS = [
+    (re.compile(r"\bintern(?:ship)?\b", re.IGNORECASE), "internship"),
+    (re.compile(r"\bpart[\s-]?time\b", re.IGNORECASE), "part_time"),
+    (re.compile(r"\b(?:contract|contractor|temporary|fixed[\s-]?term)\b", re.IGNORECASE), "contract"),
+    (re.compile(r"\bfull[\s-]?time\b", re.IGNORECASE), "full_time"),
+]
+
+
+def _extract_job_type(text: str) -> str:
+    if not text:
+        return ""
+    for pattern, label in _JOB_TYPE_PATTERNS:
+        if pattern.search(text):
+            return label
+    return ""
+
+
 async def _fetch_source_jobs(source: JobSource, profiles: list[dict]) -> list[dict]:
     """Fetch everything one source has to offer, isolating failures so a
     bad source (or a single failed keyword/location call against it)
@@ -161,12 +182,15 @@ async def scrape_jobs() -> int:
                 existing = await db.execute(select(Job).where(Job.url == job_data["url"]))
                 if existing.scalars().first():
                     continue
+                job_type_hint = ""
                 if job_data.get("platform") == "linkedin" and not (job_data.get("description") or "").strip():
                     details = await fetch_job_details(linkedin_client, job_data["url"])
                     job_data["description"] = details.get("description", "")
+                    job_type_hint = details.get("job_type", "")
                     await asyncio.sleep(_LINKEDIN_DESCRIPTION_DELAY_SECONDS)
                 job_text = f"{job_data.get('title', '')}\n{job_data.get('description', '')}"
                 job_data["experience_required"] = _extract_experience(job_text)
+                job_data["job_type"] = job_type_hint or _extract_job_type(job_text)
                 job_data["embedding"] = embed(job_text)
                 try:
                     job_data["flagged"] = await is_likely_injection(job_text)

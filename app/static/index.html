@@ -170,8 +170,14 @@
 
       .filter-bar {
         display: flex;
+        flex-direction: column;
         gap: 10px;
         margin: -6px 0 16px;
+      }
+
+      .filter-row {
+        display: flex;
+        gap: 10px;
       }
 
       .filter-field {
@@ -179,6 +185,22 @@
         display: flex;
         flex-direction: column;
         gap: 4px;
+        min-width: 0;
+      }
+
+      .filter-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.86rem;
+        color: var(--text);
+        cursor: pointer;
+      }
+
+      .filter-checkbox input {
+        width: 15px;
+        height: 15px;
+        accent-color: var(--accent);
       }
 
       .filter-field select {
@@ -520,22 +542,50 @@
           <input id="jobSearch" class="search-box" type="text" placeholder="Search jobs, skills, companies..." />
 
           <div id="filterBar" class="filter-bar" hidden>
-            <label class="filter-field">
-              <span class="tiny-label">Sort by</span>
-              <select id="sortSelect">
-                <option value="score">Best match</option>
-                <option value="newest">Newest first</option>
-                <option value="company">Company (A-Z)</option>
-              </select>
-            </label>
-            <label class="filter-field">
-              <span class="tiny-label">Platform</span>
-              <select id="platformFilter">
-                <option value="">All platforms</option>
-                <option value="linkedin">LinkedIn</option>
-                <option value="ats_greenhouse">Greenhouse</option>
-                <option value="ats_lever">Lever</option>
-              </select>
+            <div class="filter-row">
+              <label class="filter-field">
+                <span class="tiny-label">Sort by</span>
+                <select id="sortSelect">
+                  <option value="score">Best match</option>
+                  <option value="newest">Date posted (newest)</option>
+                  <option value="company">Company (A-Z)</option>
+                </select>
+              </label>
+              <label class="filter-field">
+                <span class="tiny-label">Platform</span>
+                <select id="platformFilter">
+                  <option value="">All platforms</option>
+                  <option value="linkedin">LinkedIn</option>
+                  <option value="ats_greenhouse">Greenhouse</option>
+                  <option value="ats_lever">Lever</option>
+                </select>
+              </label>
+            </div>
+            <div class="filter-row">
+              <label class="filter-field">
+                <span class="tiny-label">Job type</span>
+                <select id="jobTypeFilter">
+                  <option value="">Any type</option>
+                  <option value="full_time">Full-time</option>
+                  <option value="part_time">Part-time</option>
+                  <option value="contract">Contract</option>
+                  <option value="internship">Internship</option>
+                </select>
+              </label>
+              <label class="filter-field">
+                <span class="tiny-label">Experience</span>
+                <select id="experienceFilter">
+                  <option value="">Any level</option>
+                  <option value="entry">Entry (0-2 yrs)</option>
+                  <option value="mid">Mid (2-5 yrs)</option>
+                  <option value="senior">Senior (5-8 yrs)</option>
+                  <option value="lead">Lead+ (8+ yrs)</option>
+                </select>
+              </label>
+            </div>
+            <label class="filter-checkbox">
+              <input type="checkbox" id="remoteOnlyFilter" />
+              <span>Remote only</span>
             </label>
           </div>
 
@@ -632,6 +682,9 @@
       const filterBarEl = document.getElementById('filterBar');
       const sortSelectEl = document.getElementById('sortSelect');
       const platformFilterEl = document.getElementById('platformFilter');
+      const jobTypeFilterEl = document.getElementById('jobTypeFilter');
+      const experienceFilterEl = document.getElementById('experienceFilter');
+      const remoteOnlyFilterEl = document.getElementById('remoteOnlyFilter');
       const detailCompanyEl = document.getElementById('detailCompany');
       const detailTitleEl = document.getElementById('detailTitle');
       const detailScoreEl = document.getElementById('detailScore');
@@ -668,13 +721,33 @@
         return Math.min(98, Math.max(65, Math.round(72 + (((job.title || '').length + (job.company || '').length) % 18))));
       }
 
+      function isRemote(job) {
+        return (job.location || '').toLowerCase().includes('remote');
+      }
+
+      function experienceBucket(job) {
+        const match = (job.experience_required || '').match(/\d+/);
+        if (!match) return '';
+        const years = Number(match[0]);
+        if (years <= 1) return 'entry';
+        if (years <= 4) return 'mid';
+        if (years <= 7) return 'senior';
+        return 'lead';
+      }
+
       function renderJobs() {
         const query = (jobSearchEl.value || '').trim().toLowerCase();
         const platform = platformFilterEl.value;
+        const jobType = jobTypeFilterEl.value;
+        const experienceLevel = experienceFilterEl.value;
+        const remoteOnly = remoteOnlyFilterEl.checked;
         const sortBy = sortSelectEl.value;
 
         let visibleJobs = state.jobs.filter((job) => {
           if (platform && job.platform !== platform) return false;
+          if (jobType && job.job_type !== jobType) return false;
+          if (experienceLevel && experienceBucket(job) !== experienceLevel) return false;
+          if (remoteOnly && !isRemote(job)) return false;
           if (!query) return true;
           const haystack = `${job.title} ${job.company} ${job.location} ${job.description}`.toLowerCase();
           return haystack.includes(query);
@@ -951,6 +1024,9 @@
       });
       sortSelectEl.addEventListener('change', renderJobs);
       platformFilterEl.addEventListener('change', renderJobs);
+      jobTypeFilterEl.addEventListener('change', renderJobs);
+      experienceFilterEl.addEventListener('change', renderJobs);
+      remoteOnlyFilterEl.addEventListener('change', renderJobs);
 
       (async function init() {
         try {

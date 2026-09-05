@@ -18,6 +18,7 @@ class Job(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
     experience_required: Mapped[str] = mapped_column()
+    job_type: Mapped[str] = mapped_column(Text, default="")
     location: Mapped[str] = mapped_column(Text)
     company: Mapped[str] = mapped_column(Text)
     platform: Mapped[str] = mapped_column(Text)
