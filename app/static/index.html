@@ -151,10 +151,43 @@
         margin-bottom: 16px;
       }
 
+      .panel-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
       .panel-title {
         font-family: var(--serif);
         font-size: 1.2rem;
         font-weight: 500;
+      }
+
+      .ghost-button.small {
+        padding: 6px 12px;
+        font-size: 0.82rem;
+      }
+
+      .filter-bar {
+        display: flex;
+        gap: 10px;
+        margin: -6px 0 16px;
+      }
+
+      .filter-field {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .filter-field select {
+        background: #fff;
+        border: 1px solid var(--line);
+        color: var(--text);
+        border-radius: var(--radius);
+        padding: 8px 10px;
+        font-size: 0.86rem;
       }
 
       input, select {
@@ -478,12 +511,36 @@
         <aside class="panel jobs-panel">
           <div class="panel-header">
             <div class="panel-title">Jobs</div>
-            <span class="status-pill"><span class="dot"></span> Live</span>
+            <div class="panel-header-actions">
+              <button class="ghost-button small" id="filterToggle">Filter</button>
+              <span class="status-pill"><span class="dot"></span> Live</span>
+            </div>
           </div>
 
           <input id="jobSearch" class="search-box" type="text" placeholder="Search jobs, skills, companies..." />
+
+          <div id="filterBar" class="filter-bar" hidden>
+            <label class="filter-field">
+              <span class="tiny-label">Sort by</span>
+              <select id="sortSelect">
+                <option value="score">Best match</option>
+                <option value="newest">Newest first</option>
+                <option value="company">Company (A-Z)</option>
+              </select>
+            </label>
+            <label class="filter-field">
+              <span class="tiny-label">Platform</span>
+              <select id="platformFilter">
+                <option value="">All platforms</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="ats_greenhouse">Greenhouse</option>
+                <option value="ats_lever">Lever</option>
+              </select>
+            </label>
+          </div>
+
           <div id="jobList" class="job-list"></div>
-          <a href="/jobs-all" id="showAllLink" class="show-all-link" hidden>Show all <span id="jobTotalCount"></span> jobs &rarr;</a>
+          <a href="/jobs-all" class="show-all-link">View as table &rarr;</a>
         </aside>
 
         <section class="panel detail-panel">
@@ -571,9 +628,10 @@
       };
 
       const jobListEl = document.getElementById('jobList');
-      const showAllLinkEl = document.getElementById('showAllLink');
-      const jobTotalCountEl = document.getElementById('jobTotalCount');
-      const SIDEBAR_JOB_LIMIT = 5;
+      const filterToggleEl = document.getElementById('filterToggle');
+      const filterBarEl = document.getElementById('filterBar');
+      const sortSelectEl = document.getElementById('sortSelect');
+      const platformFilterEl = document.getElementById('platformFilter');
       const detailCompanyEl = document.getElementById('detailCompany');
       const detailTitleEl = document.getElementById('detailTitle');
       const detailScoreEl = document.getElementById('detailScore');
@@ -606,30 +664,40 @@
           .replace(/'/g, '&#039;');
       }
 
+      function scoreFor(job) {
+        return Math.min(98, Math.max(65, Math.round(72 + (((job.title || '').length + (job.company || '').length) % 18))));
+      }
+
       function renderJobs() {
         const query = (jobSearchEl.value || '').trim().toLowerCase();
-        const visibleJobs = state.jobs.filter((job) => {
+        const platform = platformFilterEl.value;
+        const sortBy = sortSelectEl.value;
+
+        let visibleJobs = state.jobs.filter((job) => {
+          if (platform && job.platform !== platform) return false;
           if (!query) return true;
           const haystack = `${job.title} ${job.company} ${job.location} ${job.description}`.toLowerCase();
           return haystack.includes(query);
         });
 
+        visibleJobs = visibleJobs.slice().sort((a, b) => {
+          if (sortBy === 'newest') {
+            return new Date(b.posted_at || 0) - new Date(a.posted_at || 0);
+          }
+          if (sortBy === 'company') {
+            return (a.company || '').localeCompare(b.company || '');
+          }
+          return scoreFor(b) - scoreFor(a);
+        });
+
         if (!visibleJobs.length) {
-          jobListEl.innerHTML = '<div class="job-card"><div class="muted">No jobs match the current search.</div></div>';
-          showAllLinkEl.hidden = true;
+          jobListEl.innerHTML = '<div class="job-card"><div class="muted">No jobs match the current filters.</div></div>';
           return;
         }
 
-        if (state.jobs.length > SIDEBAR_JOB_LIMIT) {
-          jobTotalCountEl.textContent = state.jobs.length;
-          showAllLinkEl.hidden = false;
-        } else {
-          showAllLinkEl.hidden = true;
-        }
-
-        jobListEl.innerHTML = visibleJobs.slice(0, SIDEBAR_JOB_LIMIT).map((job) => {
+        jobListEl.innerHTML = visibleJobs.map((job) => {
           const isActive = String(job.id) === String(state.selectedJobId);
-          const score = Math.min(98, Math.max(65, Math.round(72 + ((job.title.length + job.company.length) % 18))));
+          const score = scoreFor(job);
           return `
             <div class="job-card ${isActive ? 'active' : ''}" data-job-id="${job.id}">
               <div class="job-topline">
@@ -710,7 +778,7 @@
 
         detailCompanyEl.textContent = job.company || 'Company';
         detailTitleEl.textContent = job.title || 'Untitled role';
-        detailScoreEl.textContent = `${Math.min(98, Math.max(65, Math.round(72 + ((job.title.length + job.company.length) % 18))))}%`;
+        detailScoreEl.textContent = `${scoreFor(job)}%`;
         detailLocationEl.textContent = job.location || 'Remote';
         detailExperienceEl.textContent = job.experience_required || 'Not specified';
         detailPlatformEl.textContent = job.platform || 'Platform';
@@ -878,6 +946,11 @@
         state.selectedResumeId = event.target.value ? Number(event.target.value) : null;
       });
       jobSearchEl.addEventListener('input', renderJobs);
+      filterToggleEl.addEventListener('click', () => {
+        filterBarEl.hidden = !filterBarEl.hidden;
+      });
+      sortSelectEl.addEventListener('change', renderJobs);
+      platformFilterEl.addEventListener('change', renderJobs);
 
       (async function init() {
         try {
