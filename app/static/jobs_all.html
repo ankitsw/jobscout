@@ -164,7 +164,16 @@
       .job-title-cell {
         font-family: var(--serif);
         font-weight: 500;
-        max-width: 340px;
+        max-width: 260px;
+      }
+
+      .description-cell {
+        max-width: 280px;
+        color: var(--muted);
+        font-size: 0.86rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .company-cell {
@@ -303,6 +312,7 @@
           <thead>
             <tr>
               <th>Role</th>
+              <th>Description</th>
               <th>Company</th>
               <th>Location</th>
               <th>Platform</th>
@@ -371,13 +381,16 @@
         });
 
         if (!rows.length) {
-          tableBodyEl.innerHTML = `<tr><td colspan="7"><div class="empty-state">No jobs match the current search.</div></td></tr>`;
+          tableBodyEl.innerHTML = `<tr><td colspan="8"><div class="empty-state">No jobs match the current search.</div></td></tr>`;
           return;
         }
 
-        tableBodyEl.innerHTML = rows.map((job) => `
+        tableBodyEl.innerHTML = rows.map((job) => {
+          const description = (job.description || '').replace(/\s+/g, ' ').trim();
+          return `
           <tr data-job-id="${job.id}">
             <td class="job-title-cell">${escapeHtml(job.title || 'Untitled role')}</td>
+            <td class="description-cell" title="${escapeHtml(description)}">${escapeHtml(description || 'No description available.')}</td>
             <td class="company-cell" data-company="${escapeHtml(job.company || '')}">
               <span class="company-name">${escapeHtml(job.company || 'Company')}</span>
             </td>
@@ -387,7 +400,8 @@
             <td><span class="score">${scoreFor(job)}%</span></td>
             <td>${job.url ? `<a class="open-link" href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer" title="Open job posting" onclick="event.stopPropagation()">&#8599;</a>` : ''}</td>
           </tr>
-        `).join('');
+        `;
+        }).join('');
 
         tableBodyEl.querySelectorAll('tr[data-job-id]').forEach((row) => {
           row.addEventListener('click', () => {

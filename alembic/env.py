@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 from app.models.chat import ChatMessage  # noqa: F401
+from app.models.company import Company  # noqa: F401
 
 from app.config import settings
 from app.services.database import Base

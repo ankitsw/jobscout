@@ -638,7 +638,9 @@
         }
       }
 
-      function selectJob(jobId) {
+      const companyDescriptionCache = new Map();
+
+      async function selectJob(jobId) {
         const job = state.jobs.find((item) => Number(item.id) === Number(jobId));
         if (!job) return;
 
@@ -648,7 +650,36 @@
         detailLocationEl.textContent = job.location || 'Remote';
         detailExperienceEl.textContent = job.experience_required || 'Not specified';
         detailPlatformEl.textContent = job.platform || 'Platform';
-        detailDescriptionEl.textContent = job.description || 'No description available.';
+
+        const jobDescription = (job.description || '').trim();
+        if (jobDescription) {
+          detailDescriptionEl.textContent = jobDescription;
+          return;
+        }
+
+        detailDescriptionEl.textContent = 'No job description available. Looking up the company instead…';
+        const companyName = job.company || '';
+        if (!companyName) {
+          detailDescriptionEl.textContent = 'No description available.';
+          return;
+        }
+
+        let companyDescription = companyDescriptionCache.get(companyName);
+        if (companyDescription === undefined) {
+          try {
+            const response = await fetch(`/jobs/company-research?name=${encodeURIComponent(companyName)}`);
+            const profile = response.ok ? await response.json() : null;
+            companyDescription = (profile && profile.description) || '';
+          } catch (error) {
+            companyDescription = '';
+          }
+          companyDescriptionCache.set(companyName, companyDescription);
+        }
+
+        if (Number(state.selectedJobId) !== Number(jobId)) return; // user moved on to another job
+        detailDescriptionEl.textContent = companyDescription
+          ? `No job description available. About ${companyName}:\n\n${companyDescription}`
+          : 'No description available.';
       }
 
       function appendChatMessage(role, text) {

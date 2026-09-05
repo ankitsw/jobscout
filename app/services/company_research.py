@@ -1,13 +1,23 @@
 import json
 import logging
+from datetime import datetime, timedelta, timezone
+
 from groq import AsyncGroq
 from pydantic import BaseModel, Field, ValidationError
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from tavily import AsyncTavilyClient
+
 from app.config import settings
+from app.models.company import Company
 
 log = logging.getLogger(__name__)
 
 SMALL_MODEL = "openai/gpt-oss-20b"
+
+# Company facts (size, founding, HQ) rarely change; re-fetching every hover
+# would burn Tavily/Groq calls for no benefit. Refresh once a row is this old.
+_CACHE_MAX_AGE = timedelta(days=30)
 
 
 class CompanyProfile(BaseModel):
@@ -30,6 +40,33 @@ Return ONLY valid JSON matching this shape:
  "headquarters": "...", "rating": null, "tech_stack": [...], "culture_signals": "..."}
 
 If a field isn't findable in the search results, leave it as empty string or null. Do not guess or invent information."""
+
+
+def _normalize(company_name: str) -> str:
+    return company_name.strip().lower()
+
+
+def _profile_from_row(row: Company) -> CompanyProfile:
+    return CompanyProfile(
+        name=row.name,
+        domain=row.domain,
+        description=row.description,
+        size=row.size,
+        founded=row.founded,
+        headquarters=row.headquarters,
+        rating=row.rating,
+        tech_stack=list(row.tech_stack or []),
+        culture_signals=row.culture_signals,
+        source=row.source,
+    )
+
+
+def _has_real_data(profile: CompanyProfile) -> bool:
+    return bool(
+        profile.domain or profile.description or profile.size or profile.founded
+        or profile.headquarters or profile.rating is not None or profile.tech_stack
+        or profile.culture_signals
+    )
 
 
 async def _search_company(company_name: str) -> str:
@@ -83,6 +120,47 @@ async def _extract_profile(company_name: str, raw_results: str) -> CompanyProfil
         return CompanyProfile(name=company_name)
 
 
-async def research_company(company_name: str) -> CompanyProfile:
+async def research_company(company_name: str, db: AsyncSession) -> CompanyProfile:
+    """Look up cached company research first; only hit Tavily/Groq on a
+    cache miss or when the cached row has gone stale."""
+    lookup_key = _normalize(company_name)
+    existing = await db.execute(select(Company).where(Company.lookup_key == lookup_key))
+    row = existing.scalars().first()
+
+    if row and datetime.now(timezone.utc) - row.updated_at < _CACHE_MAX_AGE:
+        return _profile_from_row(row)
+
     raw_results = await _search_company(company_name)
-    return await _extract_profile(company_name, raw_results)
+    profile = await _extract_profile(company_name, raw_results)
+
+    if not _has_real_data(profile):
+        # Don't overwrite a perfectly good cached row with an empty retry,
+        # and don't cache a miss either — let the next lookup try again.
+        return _profile_from_row(row) if row else profile
+
+    if row:
+        row.domain = profile.domain
+        row.description = profile.description
+        row.size = profile.size
+        row.founded = profile.founded
+        row.headquarters = profile.headquarters
+        row.rating = profile.rating
+        row.tech_stack = profile.tech_stack
+        row.culture_signals = profile.culture_signals
+        row.source = profile.source
+    else:
+        db.add(Company(
+            name=company_name,
+            lookup_key=lookup_key,
+            domain=profile.domain,
+            description=profile.description,
+            size=profile.size,
+            founded=profile.founded,
+            headquarters=profile.headquarters,
+            rating=profile.rating,
+            tech_stack=profile.tech_stack,
+            culture_signals=profile.culture_signals,
+            source=profile.source,
+        ))
+    await db.commit()
+    return profile

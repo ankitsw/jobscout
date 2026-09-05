@@ -1,11 +1,12 @@
 import asyncio
 import logging
 from datetime import datetime, timezone, timedelta
+import httpx
 from sqlalchemy import select
 from app.config import settings
 from app.services.database import AsyncSessionLocal
 from app.models.job import Job
-from app.services.scraper import LinkedInSource
+from app.services.scraper import LinkedInSource, fetch_description
 from app.services.indeed_scraper import IndeedSource
 from app.services.sources.ats import ATSSource
 from app.services.sources.base import JobSource
@@ -13,6 +14,12 @@ from app.services.embeddings import embed
 from app.services.injection_filter import is_likely_injection
 from app.services.emailer import send_job_alert_email
 from app.services.sheets import append_jobs_to_sheet
+
+# Seconds to wait between LinkedIn per-job description requests. Firing
+# these concurrently (the old behavior) got every request 429'd almost
+# instantly; a real pause between sequential requests is what actually
+# gets descriptions through.
+_LINKEDIN_DESCRIPTION_DELAY_SECONDS = 1.0
 
 log = logging.getLogger(__name__)
 
@@ -99,7 +106,7 @@ async def _fetch_source_jobs(source: JobSource, profiles: list[dict]) -> list[di
 
 async def scrape_jobs() -> int:
     """Fetch new jobs from every configured source and save them."""
-    async with AsyncSessionLocal() as db:
+    async with AsyncSessionLocal() as db, httpx.AsyncClient() as linkedin_client:
         new_jobs: list[Job] = []
         alert_jobs: list[dict] = []
         source_counts: dict[str, int] = {}
@@ -127,6 +134,9 @@ async def scrape_jobs() -> int:
                 existing = await db.execute(select(Job).where(Job.url == job_data["url"]))
                 if existing.scalars().first():
                     continue
+                if job_data.get("platform") == "linkedin" and not (job_data.get("description") or "").strip():
+                    job_data["description"] = await fetch_description(linkedin_client, job_data["url"])
+                    await asyncio.sleep(_LINKEDIN_DESCRIPTION_DELAY_SECONDS)
                 job_text = f"{job_data.get('title', '')}\n{job_data.get('description', '')}"
                 job_data["embedding"] = embed(job_text)
                 try:

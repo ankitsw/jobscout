@@ -1,4 +1,3 @@
-import asyncio
 import re
 import httpx
 from bs4 import BeautifulSoup
@@ -128,12 +127,11 @@ async def fetch_jobs(
                     "easy_apply": easy_apply,
                 })
 
-    async with httpx.AsyncClient() as client:
-        descriptions = await asyncio.gather(*[fetch_description(client, job["url"]) for job in results])
-
-    for job, desc in zip(results, descriptions):
-        job["description"] = desc
-
+    # Descriptions aren't fetched here: hitting LinkedIn's per-job endpoint
+    # for every listing (most of which are already in the DB from a prior
+    # run) blasts it with dozens of concurrent requests and gets rate-limited
+    # almost immediately. hunter.py fetches descriptions one at a time,
+    # paced, and only for jobs that turn out to be genuinely new.
     return results
 
 

@@ -18,8 +18,8 @@ async def get_jobs(db: AsyncSession = Depends(get_db)):
     return jobs
 
 @router.get("/company-research", response_model=CompanyProfile)
-async def get_company_research(name: str):
-    return await research_company(name)
+async def get_company_research(name: str, db: AsyncSession = Depends(get_db)):
+    return await research_company(name, db)
 
 
 @router.get("/{job_id}", response_model=JobOut)

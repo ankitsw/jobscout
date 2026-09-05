@@ -145,7 +145,8 @@ async def prepare_application(job_id: str, resume_id: str) -> str:
     if not job:
         return f"Job {job_id_int} not found."
 
-    company_profile = await research_company(job.company)
+    async with AsyncSessionLocal() as db:
+        company_profile = await research_company(job.company, db)
     research_text = json.dumps(company_profile.model_dump(), indent=2)
     enriched_description = f"{job.description}\n\n--- Company Research ---\n{research_text}"
 
