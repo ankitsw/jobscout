@@ -12,7 +12,7 @@ from langgraph.prebuilt import create_react_agent
 from langsmith import traceable
 from sqlalchemy import select, delete
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 from pydantic import SecretStr
 from app.config import settings
 from app.services.database import AsyncSessionLocal
