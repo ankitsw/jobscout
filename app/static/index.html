@@ -370,6 +370,22 @@
         padding: 11px 16px;
       }
 
+      .show-all-link {
+        display: block;
+        text-align: center;
+        margin-top: 14px;
+        padding: 10px;
+        color: var(--accent-strong);
+        text-decoration: none;
+        font-size: 0.88rem;
+        font-weight: 500;
+        border-top: 1px solid var(--line);
+      }
+
+      .show-all-link:hover {
+        text-decoration: underline;
+      }
+
       .status-pill {
         display: inline-flex;
         align-items: center;
@@ -420,6 +436,7 @@
 
           <input id="jobSearch" class="search-box" type="text" placeholder="Search jobs, skills, companies..." />
           <div id="jobList" class="job-list"></div>
+          <a href="/jobs-all" id="showAllLink" class="show-all-link" hidden>Show all <span id="jobTotalCount"></span> jobs &rarr;</a>
         </aside>
 
         <section class="panel detail-panel">
@@ -500,6 +517,9 @@
       };
 
       const jobListEl = document.getElementById('jobList');
+      const showAllLinkEl = document.getElementById('showAllLink');
+      const jobTotalCountEl = document.getElementById('jobTotalCount');
+      const SIDEBAR_JOB_LIMIT = 15;
       const detailCompanyEl = document.getElementById('detailCompany');
       const detailTitleEl = document.getElementById('detailTitle');
       const detailScoreEl = document.getElementById('detailScore');
@@ -538,10 +558,18 @@
 
         if (!visibleJobs.length) {
           jobListEl.innerHTML = '<div class="job-card"><div class="muted">No jobs match the current search.</div></div>';
+          showAllLinkEl.hidden = true;
           return;
         }
 
-        jobListEl.innerHTML = visibleJobs.map((job) => {
+        if (state.jobs.length > SIDEBAR_JOB_LIMIT) {
+          jobTotalCountEl.textContent = state.jobs.length;
+          showAllLinkEl.hidden = false;
+        } else {
+          showAllLinkEl.hidden = true;
+        }
+
+        jobListEl.innerHTML = visibleJobs.slice(0, SIDEBAR_JOB_LIMIT).map((job) => {
           const isActive = String(job.id) === String(state.selectedJobId);
           const score = Math.min(98, Math.max(65, Math.round(72 + ((job.title.length + job.company.length) % 18))));
           return `
@@ -607,8 +635,13 @@
         const response = await fetch('/jobs/');
         const jobs = await response.json();
         state.jobs = Array.isArray(jobs) ? jobs : [];
-        if (!state.selectedJobId && state.jobs.length) {
-          state.selectedJobId = Number(state.jobs[0].id);
+        if (!state.selectedJobId) {
+          const requestedId = new URLSearchParams(window.location.search).get('job');
+          if (requestedId && state.jobs.some((job) => String(job.id) === requestedId)) {
+            state.selectedJobId = Number(requestedId);
+          } else if (state.jobs.length) {
+            state.selectedJobId = Number(state.jobs[0].id);
+          }
         }
         renderJobs();
         if (state.selectedJobId) {

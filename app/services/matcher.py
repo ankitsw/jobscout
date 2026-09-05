@@ -55,8 +55,9 @@ DESCRIPTION: {job_description}
 </job_posting>"""
 
     completion = await client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        max_tokens=400,
+        model="openai/gpt-oss-120b",
+        max_tokens=800,
+        reasoning_effort="low",
         response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": _SYSTEM_PROMPT},

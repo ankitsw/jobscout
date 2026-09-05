@@ -32,8 +32,9 @@ os.environ["LANGSMITH_PROJECT"] = "jobscout"
 _groq = AsyncGroq(api_key=settings.api_key)
 
 _llm = ChatGroq(
-    model="meta-llama/llama-4-scout-17b-16e-instruct",
+    model="openai/gpt-oss-120b",
     api_key=SecretStr(settings.api_key),
+    reasoning_effort="low",
 )
 
 _DESTRUCTIVE_KEYWORDS = {"delete", "drop", "wipe", "truncate", "erase"}
@@ -267,6 +268,10 @@ Reply with one word only."""
     reraise=True,
 )
 async def _groq_create(**kwargs):
+    # gpt-oss models spend part of max_tokens on hidden reasoning before the
+    # visible answer; "low" keeps that overhead small for these short,
+    # single-purpose calls (route labels, summaries) unless overridden.
+    kwargs.setdefault("reasoning_effort", "low")
     return await _groq.chat.completions.create(**kwargs)
 
 
@@ -276,9 +281,9 @@ async def _route(message: str, history: list[dict]) -> str:
     context.extend(history[-2:])
     context.append({"role": "user", "content": message})
     resp = await _groq_create(
-        model="meta-llama/llama-4-scout-17b-16e-instruct",
+        model="openai/gpt-oss-120b",
         messages=context,
-        max_tokens=10,
+        max_tokens=200,
         temperature=0,
     )
     label = (resp.choices[0].message.content or "general").strip().lower()
@@ -364,12 +369,12 @@ async def _summarise_old_turns(thread_id: str, rows: list) -> list:
 
     conversation_text = "\n".join(f"{r.role.upper()}: {r.content}" for r in to_summarise)
     summary_resp = await _groq_create(
-        model="meta-llama/llama-4-scout-17b-16e-instruct",
+        model="openai/gpt-oss-120b",
         messages=[
             {"role": "system", "content": "You are a concise summariser."},
             {"role": "user", "content": f"Summarise this job-search conversation in under 150 words, preserving key facts (job titles, companies, decisions made):\n\n{conversation_text}"},
         ],
-        max_tokens=300,
+        max_tokens=700,
     )
     summary_text = summary_resp.choices[0].message.content or ""
 

@@ -57,6 +57,11 @@ app.include_router(hunter.router)
 async def index():
     return FileResponse("app/static/index.html")
 
+
+@app.get("/jobs-all", include_in_schema=False)
+async def jobs_all_page():
+    return FileResponse("app/static/jobs_all.html")
+
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "jobscout"}

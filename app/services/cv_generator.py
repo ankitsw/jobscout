@@ -35,8 +35,9 @@ EXPERIENCE REQUIRED: {experience_required} years
 DESCRIPTION: {job_description}
 </job_posting>"""
     completion = await client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        max_tokens=1500,
+        model="openai/gpt-oss-120b",
+        max_tokens=2200,
+        reasoning_effort="low",
         messages=[
             {"role": "system", "content": _SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},

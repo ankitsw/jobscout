@@ -2,10 +2,10 @@ import asyncio
 import json
 from groq import AsyncGroq
 from pydantic import BaseModel, Field, ValidationError
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 from app.config import settings
 
-SMALL_MODEL = "llama-3.1-8b-instant"
+SMALL_MODEL = "openai/gpt-oss-20b"
 
 
 class CompanyProfile(BaseModel):
@@ -55,7 +55,8 @@ async def _extract_profile(company_name: str, raw_results: str) -> CompanyProfil
     try:
         resp = await client.chat.completions.create(
             model=SMALL_MODEL,
-            max_tokens=400,
+            max_tokens=700,
+            reasoning_effort="low",
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": _EXTRACT_PROMPT},

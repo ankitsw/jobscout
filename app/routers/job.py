@@ -4,6 +4,7 @@ from sqlalchemy import select
 from app.services.database import get_db
 from app.models.job import Job
 from app.schemas.job import JobCreate, JobOut
+from app.services.company_research import CompanyProfile, research_company
 
 router = APIRouter(
     prefix="/jobs",
@@ -15,6 +16,11 @@ async def get_jobs(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Job))
     jobs = result.scalars().all()
     return jobs
+
+@router.get("/company-research", response_model=CompanyProfile)
+async def get_company_research(name: str):
+    return await research_company(name)
+
 
 @router.get("/{job_id}", response_model=JobOut)
 async def get_job(job_id: int, db: AsyncSession = Depends(get_db)):
