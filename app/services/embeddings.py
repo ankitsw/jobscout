@@ -1,18 +1,26 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import math
 from functools import lru_cache
 
+log = logging.getLogger(__name__)
+
 _DIMENSIONS = 384
+# Same weights as sentence-transformers' all-MiniLM-L6-v2, served through
+# ONNX Runtime via fastembed. Identical 384-d output, but no PyTorch: the
+# process peaks around 300 MB instead of exceeding Render's 512 MB limit.
+_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
 
 @lru_cache(maxsize=1)
 def _load_model():
     try:
-        from sentence_transformers import SentenceTransformer
-        return SentenceTransformer("all-MiniLM-L6-v2")
+        from fastembed import TextEmbedding
+        return TextEmbedding(model_name=_MODEL_NAME)
     except Exception:
+        log.exception("embedding model unavailable, using hashed fallback")
         return None
 
 
@@ -30,5 +38,6 @@ def embed(text: str) -> list[float]:
     model = _load_model()
     if model is None:
         return _fallback_embedding(text)
-    vector = model.encode(text, normalize_embeddings=True)
-    return vector.tolist()
+    vector = next(iter(model.embed([text])))
+    norm = float(math.sqrt(sum(float(v) * float(v) for v in vector))) or 1.0
+    return [float(v) / norm for v in vector]

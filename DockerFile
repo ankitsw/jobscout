@@ -5,10 +5,15 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    FASTEMBED_CACHE_PATH=/app/.fastembed_cache
 
 COPY requirements.txt .
 RUN pip install --default-timeout=120 -r requirements.txt
+
+# Bake the embedding model into the image so the first request after a
+# (re)start doesn't spend ~30s downloading it onto Render's ephemeral disk.
+RUN python -c "from fastembed import TextEmbedding; TextEmbedding('sentence-transformers/all-MiniLM-L6-v2')"
 
 COPY . .
 RUN chmod +x docker-entrypoint.sh
