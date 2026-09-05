@@ -1,9 +1,12 @@
 import asyncio
 import json
+import logging
 from groq import AsyncGroq
 from pydantic import BaseModel, Field, ValidationError
 from ddgs import DDGS
 from app.config import settings
+
+log = logging.getLogger(__name__)
 
 SMALL_MODEL = "openai/gpt-oss-20b"
 
@@ -39,11 +42,13 @@ async def _search_company(company_name: str) -> str:
             ))
         )
         if not results:
+            log.warning("company web search returned no results", extra={"company": company_name})
             return ""
         return "\n\n".join(
             f"{r['title']}\n{r['body'][:300]}" for r in results
         )
-    except Exception:
+    except Exception as e:
+        log.warning("company web search failed", extra={"company": company_name, "error": repr(e)})
         return ""
 
 
@@ -70,7 +75,8 @@ async def _extract_profile(company_name: str, raw_results: str) -> CompanyProfil
         parsed["name"] = company_name
         parsed["source"] = "web_search"
         return CompanyProfile(**parsed)
-    except (json.JSONDecodeError, ValidationError, Exception):
+    except (json.JSONDecodeError, ValidationError, Exception) as e:
+        log.warning("company profile extraction failed", extra={"company": company_name, "error": repr(e)})
         return CompanyProfile(name=company_name)
 
 
