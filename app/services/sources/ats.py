@@ -47,7 +47,9 @@ def _normalize_greenhouse_job(job: dict, board: str) -> dict:
         "url": job.get("absolute_url", ""),
         "posted_at": posted_at,
         "description": _strip_html(job.get("content", "")),
-        "experience_required": "0",
+        # hunter.py fills this in from the description text; neither
+        # Greenhouse nor Lever expose a real experience field.
+        "experience_required": "",
         "platform": "ats_greenhouse",
         "easy_apply": False,
     }
@@ -68,7 +70,7 @@ def _normalize_lever_job(job: dict, company: str) -> dict:
         "url": job.get("hostedUrl", ""),
         "posted_at": posted_at,
         "description": description.strip(),
-        "experience_required": "0",
+        "experience_required": "",
         "platform": "ats_lever",
         "easy_apply": False,
     }

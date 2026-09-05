@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from datetime import datetime, timezone, timedelta
 import httpx
 from sqlalchemy import select
@@ -65,6 +66,32 @@ def _is_relevant(title: str) -> bool:
     if any(kw in t for kw in _EXCLUDE_TITLE_KEYWORDS):
         return False
     return any(kw in t for kw in _TITLE_KEYWORDS)
+
+
+# Every source (LinkedIn's search results, Greenhouse/Lever's APIs) hands
+# back "0" for experience regardless of seniority — none of them actually
+# expose it. Pull it from the description text instead, checked in order
+# from most to least specific so "3-5 years" doesn't fall through to a
+# looser "3 years" match first.
+_EXPERIENCE_PATTERNS = [
+    re.compile(r"(\d{1,2})\s*(?:-|–|to)\s*(\d{1,2})\+?\s*years?", re.IGNORECASE),
+    re.compile(r"(\d{1,2})\s*\+\s*years?", re.IGNORECASE),
+    re.compile(r"(?:minimum|min\.?|at least)\s*(?:of\s*)?(\d{1,2})\s*years?", re.IGNORECASE),
+    re.compile(r"(\d{1,2})\s*years?\s+of\s+[a-zA-Z ]{0,30}?experience", re.IGNORECASE),
+]
+
+
+def _extract_experience(text: str) -> str:
+    if not text:
+        return ""
+    match = _EXPERIENCE_PATTERNS[0].search(text)
+    if match:
+        return f"{match.group(1)}-{match.group(2)} years"
+    for pattern in _EXPERIENCE_PATTERNS[1:]:
+        match = pattern.search(text)
+        if match:
+            return f"{match.group(1)}+ years"
+    return ""
 
 
 async def _fetch_source_jobs(source: JobSource, profiles: list[dict]) -> list[dict]:
@@ -139,6 +166,7 @@ async def scrape_jobs() -> int:
                     job_data["description"] = details.get("description", "")
                     await asyncio.sleep(_LINKEDIN_DESCRIPTION_DELAY_SECONDS)
                 job_text = f"{job_data.get('title', '')}\n{job_data.get('description', '')}"
+                job_data["experience_required"] = _extract_experience(job_text)
                 job_data["embedding"] = embed(job_text)
                 try:
                     job_data["flagged"] = await is_likely_injection(job_text)

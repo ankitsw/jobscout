@@ -56,7 +56,10 @@ async def fetch_profile(company_name: str) -> AmbitionBoxProfile | None:
         return None
     url = f"https://www.ambitionbox.com/overview/{slug}-overview"
     try:
-        async with httpx.AsyncClient(headers=_HEADERS, follow_redirects=True, timeout=15.0) as client:
+        # Short timeout: on some hosting networks AmbitionBox appears to
+        # silently drop requests rather than reject them, so a slow failure
+        # here would otherwise stall the whole company-research response.
+        async with httpx.AsyncClient(headers=_HEADERS, follow_redirects=True, timeout=8.0) as client:
             resp = await client.get(url)
             if resp.status_code != 200:
                 return None
