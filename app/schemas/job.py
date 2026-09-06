@@ -8,6 +8,7 @@ class JobBase(BaseModel):
     description:str
     experience_required:str
     job_type:str = ""
+    workplace_type:str = ""
     platform:str
     url:str
     easy_apply:bool = Field(default=False)

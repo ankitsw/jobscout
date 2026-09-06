@@ -4,6 +4,7 @@ export function scoreFor(job) {
 }
 
 export function isRemote(job) {
+  if (job.workplace_type) return job.workplace_type === 'remote';
   return (job.location || '').toLowerCase().includes('remote');
 }
 

@@ -124,6 +124,28 @@ def _extract_job_type(text: str) -> str:
     return ""
 
 
+# None of the sources expose a real work-location field - LinkedIn's search
+# cards just give a city (e.g. "Gurugram, Haryana, India"), never the word
+# "remote" itself, so a "remote only" filter that checked location alone
+# always matched zero jobs. This mirrors _extract_job_type: hybrid is
+# checked first so a "hybrid, partly remote" posting isn't misread as fully
+# remote.
+_WORKPLACE_TYPE_PATTERNS = [
+    (re.compile(r"\bhybrid\b", re.IGNORECASE), "hybrid"),
+    (re.compile(r"\b(?:remote|work[\s-]?from[\s-]?home|wfh|telecommute)\b", re.IGNORECASE), "remote"),
+    (re.compile(r"\bon[\s-]?site\b|\bin[\s-]?office\b|\bwork from office\b", re.IGNORECASE), "onsite"),
+]
+
+
+def _extract_workplace_type(text: str) -> str:
+    if not text:
+        return ""
+    for pattern, label in _WORKPLACE_TYPE_PATTERNS:
+        if pattern.search(text):
+            return label
+    return ""
+
+
 def parse_posted_at(raw) -> datetime | None:
     """Sources return posted_at as "YYYY-MM-DD" (or nothing, or already a
     datetime); the column is TIMESTAMPTZ, so normalise to an aware datetime
@@ -208,6 +230,7 @@ async def scrape_jobs() -> int:
                     continue
                 seen_urls_this_run.add(url)
                 job_type_hint = ""
+                workplace_type_hint = ""
                 fetcher = _DESCRIPTION_FETCHERS.get(job_data.get("platform", ""))
                 if fetcher and not (job_data.get("description") or "").strip():
                     fetch_fn, delay_seconds = fetcher
@@ -215,16 +238,20 @@ async def scrape_jobs() -> int:
                     if isinstance(result, dict):
                         job_data["description"] = result.get("description", "")
                         job_type_hint = result.get("job_type", "")
+                        workplace_type_hint = result.get("workplace_type", "")
                     else:
                         job_data["description"] = result or ""
                     await asyncio.sleep(delay_seconds)
-                job_text = f"{job_data.get('title', '')}\n{job_data.get('description', '')}"
+                job_text = f"{job_data.get('title', '')}\n{job_data.get('location', '')}\n{job_data.get('description', '')}"
                 # Some sources (Hirist's exp range, Internshala's employment_type
                 # attribute) already give a real value - don't clobber it with a
                 # text-regex guess.
                 if not (job_data.get("experience_required") or "").strip():
                     job_data["experience_required"] = _extract_experience(job_text)
                 job_data["job_type"] = job_data.get("job_type") or job_type_hint or _extract_job_type(job_text)
+                job_data["workplace_type"] = (
+                    job_data.get("workplace_type") or workplace_type_hint or _extract_workplace_type(job_text)
+                )
                 job_data["embedding"] = embed(job_text)
                 try:
                     job_data["flagged"] = await is_likely_injection(job_text)

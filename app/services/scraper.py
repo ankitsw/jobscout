@@ -75,10 +75,16 @@ async def fetch_job_details(client: httpx.AsyncClient, job_url: str) -> dict:
             return {}
         data = json.loads(match.group(1))
         employment_type_raw = (data.get("employmentType") or "").split(",")[0].strip().upper()
+        # schema.org marks a fully-remote posting with jobLocationType:
+        # TELECOMMUTE - a structured signal, more reliable than guessing
+        # from description text (which hunter.py still does as a fallback
+        # for postings that omit this field, e.g. hybrid roles).
+        location_type_raw = (data.get("jobLocationType") or "").strip().upper()
         return {
             "description": _clean_jsonld_description(data.get("description") or ""),
             "industry": (data.get("industry") or "").strip(),
             "job_type": _EMPLOYMENT_TYPE_MAP.get(employment_type_raw, ""),
+            "workplace_type": "remote" if location_type_raw == "TELECOMMUTE" else "",
         }
     except Exception:
         return {}
