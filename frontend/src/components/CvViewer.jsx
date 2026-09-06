@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export default function CvViewer({ job, cv, onClose }) {
   const [copied, setCopied] = useState(false);
@@ -26,7 +28,9 @@ export default function CvViewer({ job, cv, onClose }) {
             <button className="ghost-button small" onClick={onClose}>Close</button>
           </div>
         </div>
-        <pre className="cv-content">{cv}</pre>
+        <div className="cv-content">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{cv}</ReactMarkdown>
+        </div>
       </div>
     </div>
   );
