@@ -24,6 +24,7 @@ from app.services.sheets import read_sheet, update_job_status
 from app.services.scraper import fetch_jobs
 from app.services.embeddings import embed
 from app.services.company_research import research_company
+from app.services.hunter import _extract_experience, _extract_job_type, parse_posted_at
 
 os.environ["LANGSMITH_API_KEY"] = settings.langsmith_api_key
 os.environ["LANGSMITH_TRACING"] = "true"
@@ -81,7 +82,7 @@ async def list_jobs() -> str:
             "title": j.title,
             "company": j.company,
             "location": j.location,
-            "posted_at": j.posted_at,
+            "posted_at": j.posted_at.isoformat() if j.posted_at else None,
             "url": j.url,
             "years_required": _parse_required_years(j.description or ""),
         }
@@ -194,9 +195,19 @@ async def search_linkedin(keyword: str, location: str) -> str:
         saved = 0
         for job_data in jobs_data:
             existing = await db.execute(select(Job).where(Job.url == job_data["url"]))
-            if not existing.scalars().first():
-                db.add(Job(**job_data))
-                saved += 1
+            if existing.scalars().first():
+                continue
+            # This path bypasses hunter.py's scrape loop entirely, so the same
+            # normalisation (posted_at as a bare string breaks the TIMESTAMPTZ
+            # column; experience/job_type are never derived by the scraper
+            # itself) has to happen here too.
+            job_data["posted_at"] = parse_posted_at(job_data.get("posted_at"))
+            job_text = f"{job_data.get('title', '')}\n{job_data.get('description', '')}"
+            job_data["experience_required"] = _extract_experience(job_text)
+            job_data["job_type"] = _extract_job_type(job_text)
+            job_data["embedding"] = embed(job_text)
+            db.add(Job(**job_data))
+            saved += 1
         await db.commit()
     return f"Found {len(jobs_data)} jobs for '{keyword}' in '{location}', saved {saved} new."
 

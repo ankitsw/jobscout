@@ -115,6 +115,20 @@ def _extract_job_type(text: str) -> str:
     return ""
 
 
+def parse_posted_at(raw) -> datetime | None:
+    """Sources return posted_at as "YYYY-MM-DD" (or nothing, or already a
+    datetime); the column is TIMESTAMPTZ, so normalise to an aware datetime
+    or None rather than passing a bare string through to asyncpg."""
+    if isinstance(raw, datetime):
+        return raw if raw.tzinfo else raw.replace(tzinfo=timezone.utc)
+    if isinstance(raw, str) and raw.strip():
+        try:
+            return datetime.strptime(raw.strip()[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except ValueError:
+            return None
+    return None
+
+
 async def _fetch_source_jobs(source: JobSource, profiles: list[dict]) -> list[dict]:
     """Fetch everything one source has to offer, isolating failures so a
     bad source (or a single failed keyword/location call against it)
@@ -165,17 +179,7 @@ async def scrape_jobs() -> int:
             for job_data in jobs_data:
                 if not _is_relevant(job_data.get("title", "")):
                     continue
-                # Sources return posted_at as "YYYY-MM-DD" (or nothing); the column
-                # is TIMESTAMPTZ, so normalise to an aware datetime or None.
-                posted_at = job_data.get("posted_at")
-                posted_date = None
-                if isinstance(posted_at, datetime):
-                    posted_date = posted_at if posted_at.tzinfo else posted_at.replace(tzinfo=timezone.utc)
-                elif isinstance(posted_at, str) and posted_at.strip():
-                    try:
-                        posted_date = datetime.strptime(posted_at.strip()[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
-                    except ValueError:
-                        posted_date = None
+                posted_date = parse_posted_at(job_data.get("posted_at"))
                 if posted_date and datetime.now(timezone.utc) - posted_date > timedelta(days=30):
                     continue
                 job_data["posted_at"] = posted_date

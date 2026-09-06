@@ -4,6 +4,7 @@ from typing import cast
 import sentry_sdk
 from fastapi import FastAPI, Depends, Request
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -52,15 +53,21 @@ app.include_router(cv.router)
 app.include_router(agent.router)
 app.include_router(hunter.router)
 
+# The React app (frontend/) is built to frontend/dist by the Dockerfile's
+# Node stage. Vite's hashed JS/CSS bundles live under dist/assets; index.html
+# is served for both client-side routes since react-router (BrowserRouter)
+# handles the actual routing once the page loads.
+app.mount(
+    "/assets",
+    StaticFiles(directory="frontend/dist/assets", check_dir=False),
+    name="assets",
+)
+
 
 @app.get("/", include_in_schema=False)
-async def index():
-    return FileResponse("app/static/index.html")
-
-
 @app.get("/jobs-all", include_in_schema=False)
-async def jobs_all_page():
-    return FileResponse("app/static/jobs_all.html")
+async def spa():
+    return FileResponse("frontend/dist/index.html")
 
 @app.get("/health")
 def health():
