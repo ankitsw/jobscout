@@ -608,6 +608,7 @@
 
           <div class="detail-actions">
             <button class="action-button" id="generateCvButton">Generate CV for this job</button>
+            <a class="ghost-button" id="detailOpenLink" href="#" target="_blank" rel="noopener noreferrer" hidden>Open posting &#8599;</a>
           </div>
 
           <div class="subtle-card">
@@ -691,6 +692,7 @@
       const detailLocationEl = document.getElementById('detailLocation');
       const detailExperienceEl = document.getElementById('detailExperience');
       const detailPlatformEl = document.getElementById('detailPlatform');
+      const detailOpenLinkEl = document.getElementById('detailOpenLink');
       const detailSalaryEl = document.getElementById('detailSalary');
       const detailCompanyMetaEl = document.getElementById('detailCompanyMeta');
       const detailClassificationEl = document.getElementById('detailClassification');
@@ -855,6 +857,12 @@
         detailLocationEl.textContent = job.location || 'Remote';
         detailExperienceEl.textContent = job.experience_required || 'Not specified';
         detailPlatformEl.textContent = job.platform || 'Platform';
+        if (job.url) {
+          detailOpenLinkEl.href = job.url;
+          detailOpenLinkEl.hidden = false;
+        } else {
+          detailOpenLinkEl.hidden = true;
+        }
         detailSalaryEl.textContent = '—';
         detailCompanyMetaEl.hidden = true;
         detailClassificationEl.hidden = true;
