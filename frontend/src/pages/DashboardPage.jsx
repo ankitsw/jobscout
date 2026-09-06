@@ -180,6 +180,16 @@ export default function DashboardPage() {
     if (savedCv) setCvViewerOpen(true);
   }
 
+  async function handleDeleteJob(jobId) {
+    try {
+      await api.deleteJob(jobId);
+      setJobs((prev) => prev.filter((job) => Number(job.id) !== Number(jobId)));
+      if (Number(selectedJobId) === Number(jobId)) setSelectedJobId(null);
+    } catch (error) {
+      alert(error.message || 'Unable to delete job.');
+    }
+  }
+
   async function handleSendChat(text) {
     appendMessage('user', text);
     try {
@@ -264,6 +274,7 @@ export default function DashboardPage() {
             onGenerateCv={handleGenerateCv}
             hasCv={Boolean(savedCv)}
             onViewCv={handleViewCv}
+            onDeleteJob={handleDeleteJob}
           />
 
           <ChatPanel messages={messages} onSend={handleSendChat} />

@@ -88,7 +88,7 @@ input, select {
   justify-content: center;
 }
 
-.auth-card .action-button:disabled {
+.action-button:disabled {
   opacity: 0.6;
   cursor: default;
 }
@@ -156,10 +156,28 @@ input, select {
   color: var(--text);
 }
 
-.resume-upload-form input[type="file"] {
+.resume-dropzone {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 12px 14px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+  color: var(--muted);
   font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.resume-dropzone:hover,
+.resume-dropzone.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
 }
 
 .resume-list {
@@ -581,6 +599,33 @@ input, select {
   white-space: nowrap;
 }
 
+.detail-header-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.icon-button.danger:hover {
+  border-color: #c0392b;
+  color: #c0392b;
+  background: rgba(192, 57, 43, 0.08);
+}
+
 .detail-panel {
   padding: 28px;
   overflow-y: auto;
@@ -851,13 +896,13 @@ table {
   font-size: 0.92rem;
 }
 
-thead th:nth-child(1) { width: 26%; }
-thead th:nth-child(2) { width: 20%; }
-thead th:nth-child(3) { width: 22%; }
-thead th:nth-child(4) { width: 14%; }
-thead th:nth-child(5) { width: 10%; }
-thead th:nth-child(6) { width: 8%; }
-thead th:nth-child(7) { width: 44px; }
+thead th:nth-child(1) { width: 25%; }
+thead th:nth-child(2) { width: 19%; }
+thead th:nth-child(3) { width: 19%; }
+thead th:nth-child(4) { width: 12%; }
+thead th:nth-child(5) { width: 8%; }
+thead th:nth-child(6) { width: 9%; }
+thead th:nth-child(7) { width: 92px; }
 
 thead th {
   text-align: left;
@@ -929,6 +974,18 @@ tbody tr:hover {
 .open-link:hover {
   border-color: var(--accent);
   background: var(--accent-soft);
+}
+
+.row-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.row-actions .open-link,
+.row-actions .icon-button {
+  width: 26px;
+  height: 26px;
+  font-size: 0.78rem;
 }
 
 .empty-state {

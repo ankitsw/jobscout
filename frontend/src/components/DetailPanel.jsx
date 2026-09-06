@@ -10,6 +10,7 @@ export default function DetailPanel({
   onGenerateCv,
   hasCv,
   onViewCv,
+  onDeleteJob,
 }) {
   if (!job) {
     return (
@@ -45,7 +46,18 @@ export default function DetailPanel({
             </div>
           )}
         </div>
-        <div className="score">{scoreFor(job)}%</div>
+        <div className="detail-header-side">
+          <div className="score">{scoreFor(job)}%</div>
+          <button
+            className="icon-button danger"
+            title="Delete this job"
+            onClick={() => {
+              if (confirm(`Delete "${job.title || 'this job'}"? This cannot be undone.`)) onDeleteJob(job.id);
+            }}
+          >
+            &#128465;
+          </button>
+        </div>
       </div>
 
       <div className="detail-actions">

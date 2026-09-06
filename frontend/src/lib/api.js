@@ -16,6 +16,7 @@ async function request(path, options) {
 
 export const api = {
   listJobs: () => request('/jobs/'),
+  deleteJob: (jobId) => request(`/jobs/${jobId}`, { method: 'DELETE' }),
   listResumes: () => request('/resumes/'),
   uploadResume: (formData) => request('/resumes/', { method: 'POST', body: formData }),
   deleteResume: (resumeId) => request(`/resumes/${resumeId}`, { method: 'DELETE' }),

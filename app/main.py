@@ -74,7 +74,11 @@ app.mount(
 @app.get("/", include_in_schema=False)
 @app.get("/jobs-all", include_in_schema=False)
 async def spa():
-    return FileResponse("frontend/dist/index.html")
+    # This app redeploys frequently and index.html has no content hash in its
+    # own filename (unlike the JS/CSS it references) - without an explicit
+    # no-cache, a browser can serve a stale copy on a real navigation and
+    # keep pointing at a JS bundle from before the last deploy indefinitely.
+    return FileResponse("frontend/dist/index.html", headers={"Cache-Control": "no-cache"})
 
 @app.get("/health")
 def health():

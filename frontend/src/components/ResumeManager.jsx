@@ -53,6 +53,61 @@ function ResumeRow({ resume, onDelete, onRename }) {
   );
 }
 
+function UploadForm({ onUpload }) {
+  const [file, setFile] = useState(null);
+  const [name, setName] = useState('');
+  const [dragOver, setDragOver] = useState(false);
+
+  function pickFile(candidate) {
+    if (candidate && candidate.type === 'application/pdf') setFile(candidate);
+    else if (candidate) alert('Please choose a PDF file.');
+  }
+
+  function submit(event) {
+    event.preventDefault();
+    if (!file) {
+      alert('Choose or drop a PDF file first.');
+      return;
+    }
+    onUpload(file, name.trim());
+    setFile(null);
+    setName('');
+  }
+
+  return (
+    <form className="resume-upload-form" onSubmit={submit}>
+      <input
+        type="text"
+        placeholder="Name (optional)"
+        className="resume-name-input"
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+      />
+
+      <label
+        className={`resume-dropzone${dragOver ? ' drag-over' : ''}`}
+        onDragOver={(event) => { event.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          setDragOver(false);
+          pickFile(event.dataTransfer.files?.[0]);
+        }}
+      >
+        <input
+          type="file"
+          accept="application/pdf"
+          hidden
+          onChange={(event) => pickFile(event.target.files?.[0])}
+        />
+        {file ? file.name : 'Drop a PDF here, or click to browse'}
+      </label>
+
+      <button className="action-button" type="submit" disabled={!file}>Upload PDF</button>
+    </form>
+  );
+}
+
 export default function ResumeManager({ resumes, onUpload, onDelete, onRename, onClose }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -62,22 +117,7 @@ export default function ResumeManager({ resumes, onUpload, onDelete, onRename, o
           <button className="ghost-button small" onClick={onClose}>Close</button>
         </div>
 
-        <form
-          className="resume-upload-form"
-          encType="multipart/form-data"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const fileInput = event.target.elements.resumeFile;
-            const nameInput = event.target.elements.resumeName;
-            onUpload(fileInput.files[0], nameInput.value.trim());
-            fileInput.value = '';
-            nameInput.value = '';
-          }}
-        >
-          <input type="text" name="resumeName" placeholder="Name (optional)" className="resume-name-input" />
-          <input type="file" name="resumeFile" accept="application/pdf" />
-          <button className="action-button" type="submit">Upload PDF</button>
-        </form>
+        <UploadForm onUpload={onUpload} />
 
         <div className="resume-list">
           {resumes.length === 0 ? (

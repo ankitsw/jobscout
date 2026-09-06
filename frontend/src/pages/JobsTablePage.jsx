@@ -71,6 +71,15 @@ export default function JobsTablePage() {
     }
   }
 
+  async function handleDeleteJob(jobId) {
+    try {
+      await api.deleteJob(jobId);
+      setJobs((prev) => prev.filter((job) => Number(job.id) !== Number(jobId)));
+    } catch (error) {
+      alert(error.message || 'Unable to delete job.');
+    }
+  }
+
   useEffect(() => {
     function hide() {
       clearTimeout(hoverTimer.current);
@@ -194,18 +203,32 @@ export default function JobsTablePage() {
                       <td>{formatDate(job.posted_at)}</td>
                       <td><span className="score">{scoreFor(job)}%</span></td>
                       <td>
-                        {job.url && (
-                          <a
-                            className="open-link"
-                            href={job.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title="Open job posting"
-                            onClick={(event) => event.stopPropagation()}
+                        <div className="row-actions">
+                          {job.url && (
+                            <a
+                              className="open-link"
+                              href={job.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Open job posting"
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              &#8599;
+                            </a>
+                          )}
+                          <button
+                            className="icon-button danger"
+                            title="Delete this job"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              if (confirm(`Delete "${job.title || 'this job'}"? This cannot be undone.`)) {
+                                handleDeleteJob(job.id);
+                              }
+                            }}
                           >
-                            &#8599;
-                          </a>
-                        )}
+                            &#128465;
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
