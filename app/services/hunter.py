@@ -181,6 +181,14 @@ async def scrape_jobs() -> int:
         new_jobs: list[Job] = []
         alert_jobs: list[dict] = []
         source_counts: dict[str, int] = {}
+        # The same job can legitimately show up twice within one run - e.g.
+        # LinkedIn's own keyword list overlaps enough that one posting
+        # matches two different searches. The per-job "does this URL exist"
+        # check below only sees committed/flushed rows, not another pending
+        # add() from earlier in this same loop, so without this it would
+        # queue the same URL twice and crash the whole run on the unique
+        # constraint when the second one flushes.
+        seen_urls_this_run: set[str] = set()
         for source in SOURCES:
             jobs_data = await _fetch_source_jobs(source, SEARCH_PROFILES)
             source_counts[source.name] = len(jobs_data)
@@ -188,13 +196,17 @@ async def scrape_jobs() -> int:
             for job_data in jobs_data:
                 if not _is_relevant(job_data.get("title", "")):
                     continue
+                url = job_data.get("url", "")
+                if not url or url in seen_urls_this_run:
+                    continue
                 posted_date = parse_posted_at(job_data.get("posted_at"))
                 if posted_date and datetime.now(timezone.utc) - posted_date > timedelta(days=30):
                     continue
                 job_data["posted_at"] = posted_date
-                existing = await db.execute(select(Job).where(Job.url == job_data["url"]))
+                existing = await db.execute(select(Job).where(Job.url == url))
                 if existing.scalars().first():
                     continue
+                seen_urls_this_run.add(url)
                 job_type_hint = ""
                 fetcher = _DESCRIPTION_FETCHERS.get(job_data.get("platform", ""))
                 if fetcher and not (job_data.get("description") or "").strip():
