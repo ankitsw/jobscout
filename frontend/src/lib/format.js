@@ -33,6 +33,8 @@ const PLATFORM_LABELS = {
   indeed: 'Indeed',
   ats_greenhouse: 'Greenhouse',
   ats_lever: 'Lever',
+  hirist: 'Hirist',
+  internshala: 'Internshala',
 };
 
 export function platformLabel(platform) {

@@ -303,6 +303,8 @@ input, select {
 .chip.platform-indeed { color: #4d3fc4; background: #edeafb; border-color: #d9d2f6; }
 .chip.platform-ats_greenhouse { color: #2f8f4e; background: #e9f7ee; border-color: #cdecd8; }
 .chip.platform-ats_lever { color: #7c3fb0; background: #f4ecfa; border-color: #e5d3f2; }
+.chip.platform-hirist { color: #a15c07; background: #fbf1e0; border-color: #f3e0bd; }
+.chip.platform-internshala { color: #0f8a86; background: #e4f7f6; border-color: #c7ede9; }
 
 .score {
   display: inline-flex;

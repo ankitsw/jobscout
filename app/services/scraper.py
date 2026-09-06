@@ -155,7 +155,9 @@ async def fetch_jobs(
                     "url": url,
                     "posted_at": posted_at,
                     "description": "",
-                    "experience_required": str(experience),
+                    # hunter.py fills this in from the description text;
+                    # LinkedIn's search results don't expose a real value.
+                    "experience_required": "",
                     "platform": "linkedin",
                     "easy_apply": easy_apply,
                 })

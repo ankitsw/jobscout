@@ -10,24 +10,33 @@ from app.models.job import Job
 from app.services.scraper import LinkedInSource, fetch_job_details
 from app.services.indeed_scraper import IndeedSource
 from app.services.sources.ats import ATSSource
+from app.services.sources.hirist import HiristSource
+from app.services.sources.hirist import fetch_description as fetch_hirist_description
+from app.services.sources.internshala import InternshalaSource
 from app.services.sources.base import JobSource
 from app.services.embeddings import embed
 from app.services.injection_filter import is_likely_injection
 from app.services.emailer import send_job_alert_email
 from app.services.sheets import append_jobs_to_sheet
 
-# Seconds to wait between LinkedIn per-job description requests. Firing
-# these concurrently (the old behavior) got every request 429'd almost
-# instantly; a real pause between sequential requests is what actually
-# gets descriptions through.
-_LINKEDIN_DESCRIPTION_DELAY_SECONDS = 1.0
+# Seconds to wait between per-job description requests on sources that need
+# a second call to get the full text. Firing these concurrently (the old
+# LinkedIn behavior) got every request 429'd almost instantly; a real pause
+# between sequential requests is what actually gets descriptions through.
+_DESCRIPTION_FETCHERS = {
+    "linkedin": (fetch_job_details, 1.0),
+    "hirist": (fetch_hirist_description, 0.5),
+}
 
 log = logging.getLogger(__name__)
 
-# Priority order: LinkedIn/Indeed first (richer targeting), ATS last (always
-# reachable from a datacenter IP, but coarser). A source erroring or returning
-# zero rows must not lose what the others found — see _fetch_source_jobs.
-SOURCES: list[JobSource] = [LinkedInSource(), IndeedSource(), ATSSource()]
+# Priority order: LinkedIn/Indeed first (richer targeting), ATS/Hirist/
+# Internshala last (always reachable from a datacenter IP, but coarser). A
+# source erroring or returning zero rows must not lose what the others
+# found — see _fetch_source_jobs.
+SOURCES: list[JobSource] = [
+    LinkedInSource(), IndeedSource(), ATSSource(), HiristSource(), InternshalaSource(),
+]
 
 LOCATIONS = ["New Delhi, India", "Gurugram, India", "Noida, India"]
 
@@ -168,7 +177,7 @@ async def _fetch_source_jobs(source: JobSource, profiles: list[dict]) -> list[di
 
 async def scrape_jobs() -> int:
     """Fetch new jobs from every configured source and save them."""
-    async with AsyncSessionLocal() as db, httpx.AsyncClient() as linkedin_client:
+    async with AsyncSessionLocal() as db, httpx.AsyncClient() as description_client:
         new_jobs: list[Job] = []
         alert_jobs: list[dict] = []
         source_counts: dict[str, int] = {}
@@ -187,14 +196,23 @@ async def scrape_jobs() -> int:
                 if existing.scalars().first():
                     continue
                 job_type_hint = ""
-                if job_data.get("platform") == "linkedin" and not (job_data.get("description") or "").strip():
-                    details = await fetch_job_details(linkedin_client, job_data["url"])
-                    job_data["description"] = details.get("description", "")
-                    job_type_hint = details.get("job_type", "")
-                    await asyncio.sleep(_LINKEDIN_DESCRIPTION_DELAY_SECONDS)
+                fetcher = _DESCRIPTION_FETCHERS.get(job_data.get("platform", ""))
+                if fetcher and not (job_data.get("description") or "").strip():
+                    fetch_fn, delay_seconds = fetcher
+                    result = await fetch_fn(description_client, job_data["url"])
+                    if isinstance(result, dict):
+                        job_data["description"] = result.get("description", "")
+                        job_type_hint = result.get("job_type", "")
+                    else:
+                        job_data["description"] = result or ""
+                    await asyncio.sleep(delay_seconds)
                 job_text = f"{job_data.get('title', '')}\n{job_data.get('description', '')}"
-                job_data["experience_required"] = _extract_experience(job_text)
-                job_data["job_type"] = job_type_hint or _extract_job_type(job_text)
+                # Some sources (Hirist's exp range, Internshala's employment_type
+                # attribute) already give a real value - don't clobber it with a
+                # text-regex guess.
+                if not (job_data.get("experience_required") or "").strip():
+                    job_data["experience_required"] = _extract_experience(job_text)
+                job_data["job_type"] = job_data.get("job_type") or job_type_hint or _extract_job_type(job_text)
                 job_data["embedding"] = embed(job_text)
                 try:
                     job_data["flagged"] = await is_likely_injection(job_text)

@@ -52,7 +52,7 @@ class IndeedSource(JobSource):
                 "url": href.split("?")[0],
                 "posted_at": "",
                 "description": "",
-                "experience_required": str(profile.get("experience", 0)),
+                "experience_required": "",
                 "platform": self.name,
                 "easy_apply": bool(profile.get("easy_apply", False)),
             })

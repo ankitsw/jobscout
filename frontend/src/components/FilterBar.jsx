@@ -22,6 +22,8 @@ export default function FilterBar({ filters, onChange }) {
             <option value="linkedin">LinkedIn</option>
             <option value="ats_greenhouse">Greenhouse</option>
             <option value="ats_lever">Lever</option>
+            <option value="hirist">Hirist</option>
+            <option value="internshala">Internshala</option>
           </select>
         </label>
       </div>
