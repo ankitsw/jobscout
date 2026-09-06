@@ -18,7 +18,8 @@ export default function DashboardPage() {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [filterBarOpen, setFilterBarOpen] = useState(false);
   const [resumeManagerOpen, setResumeManagerOpen] = useState(false);
-  const [generatedCv, setGeneratedCv] = useState(null);
+  const [savedCv, setSavedCv] = useState(null); // { cv } for the current job+resume pair, if one has been generated
+  const [cvViewerOpen, setCvViewerOpen] = useState(false);
   const [messages, setMessages] = useState([
     { role: 'assistant', text: 'Hi! I can help shortlist roles, tailor your CV, and suggest strongest angles for each application.' },
   ]);
@@ -69,6 +70,23 @@ export default function DashboardPage() {
     () => filterAndSortJobs(jobs, search, filters),
     [jobs, search, filters],
   );
+
+  // A previously generated CV is tied to one (resume, job) pair - reload it
+  // (or clear it) whenever either side of that pair changes, so switching
+  // jobs/resumes never shows a stale CV, and switching back doesn't require
+  // paying for another LLM call.
+  useEffect(() => {
+    setCvViewerOpen(false);
+    if (!selectedJobId || !selectedResumeId) {
+      setSavedCv(null);
+      return;
+    }
+    let cancelled = false;
+    api.getSavedCv(selectedResumeId, selectedJobId).then((result) => {
+      if (!cancelled) setSavedCv(result);
+    });
+    return () => { cancelled = true; };
+  }, [selectedJobId, selectedResumeId]);
 
   // Fetch company profile + salary estimate whenever the selected job changes.
   useEffect(() => {
@@ -150,11 +168,16 @@ export default function DashboardPage() {
     }
     try {
       const result = await api.generateCv(selectedResumeId, selectedJobId);
-      setGeneratedCv({ job: selectedJob, cv: result.cv });
+      setSavedCv(result);
+      setCvViewerOpen(true);
       appendMessage('assistant', 'CV draft generated successfully. Opened it for review.');
     } catch (error) {
       alert(error.message || 'Unable to generate CV.');
     }
+  }
+
+  function handleViewCv() {
+    if (savedCv) setCvViewerOpen(true);
   }
 
   async function handleSendChat(text) {
@@ -229,6 +252,8 @@ export default function DashboardPage() {
             onSelectResume={setSelectedResumeId}
             onUploadResume={handleUploadResume}
             onGenerateCv={handleGenerateCv}
+            hasCv={Boolean(savedCv)}
+            onViewCv={handleViewCv}
           />
 
           <ChatPanel messages={messages} onSend={handleSendChat} />
@@ -244,11 +269,11 @@ export default function DashboardPage() {
         />
       )}
 
-      {generatedCv && (
+      {cvViewerOpen && savedCv && (
         <CvViewer
-          job={generatedCv.job}
-          cv={generatedCv.cv}
-          onClose={() => setGeneratedCv(null)}
+          job={selectedJob}
+          cv={savedCv.cv}
+          onClose={() => setCvViewerOpen(false)}
         />
       )}
     </div>

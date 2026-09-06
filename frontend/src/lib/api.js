@@ -28,6 +28,13 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ resume_id: resumeId, job_id: jobId }),
     }),
+  getSavedCv: async (resumeId, jobId) => {
+    try {
+      return await request(`/cv/?resume_id=${resumeId}&job_id=${jobId}`);
+    } catch {
+      return null;
+    }
+  },
   sendChatMessage: (message) =>
     request('/agent/chat', {
       method: 'POST',

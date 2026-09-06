@@ -8,6 +8,8 @@ export default function DetailPanel({
   onSelectResume,
   onUploadResume,
   onGenerateCv,
+  hasCv,
+  onViewCv,
 }) {
   if (!job) {
     return (
@@ -47,7 +49,10 @@ export default function DetailPanel({
       </div>
 
       <div className="detail-actions">
-        <button className="action-button" onClick={onGenerateCv}>Generate CV for this job</button>
+        <button className="action-button" onClick={onGenerateCv}>
+          {hasCv ? 'Regenerate CV' : 'Generate CV for this job'}
+        </button>
+        {hasCv && <button className="ghost-button" onClick={onViewCv}>View CV</button>}
         {job.url && (
           <a className="ghost-button" href={job.url} target="_blank" rel="noopener noreferrer">
             Open posting &#8599;

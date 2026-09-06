@@ -13,6 +13,7 @@ from app.config import settings
 from app.services.database import Base
 from app.models.job import Job  # noqa: F401
 from app.models.resume import Resume  # noqa: F401
+from app.models.generated_cv import GeneratedCv  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

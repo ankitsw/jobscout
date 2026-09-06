@@ -6,6 +6,7 @@ from app.rate_limit import limiter
 from app.services.database import get_db
 from app.models.resume import Resume
 from app.models.job import Job
+from app.models.generated_cv import GeneratedCv
 from app.services.cv_generator import generate_tailored_cv
 
 router = APIRouter(prefix="/cv", tags=["cv"])
@@ -14,6 +15,17 @@ router = APIRouter(prefix="/cv", tags=["cv"])
 class CVRequest(BaseModel):
     resume_id: int
     job_id: int
+
+
+@router.get("/")
+async def get_saved_cv(resume_id: int, job_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(GeneratedCv).where(GeneratedCv.resume_id == resume_id, GeneratedCv.job_id == job_id)
+    )
+    saved = result.scalars().first()
+    if not saved:
+        raise HTTPException(status_code=404, detail="No saved CV for this resume/job pair")
+    return {"resume_id": resume_id, "job_id": job_id, "cv": saved.content}
 
 
 @router.post("/generate")
@@ -36,4 +48,17 @@ async def generate_cv(request: Request, payload: CVRequest, db: AsyncSession = D
         experience_required=job.experience_required,
         job_description=job.description,
     )
+
+    result = await db.execute(
+        select(GeneratedCv).where(
+            GeneratedCv.resume_id == payload.resume_id, GeneratedCv.job_id == payload.job_id
+        )
+    )
+    saved = result.scalars().first()
+    if saved:
+        saved.content = cv
+    else:
+        db.add(GeneratedCv(resume_id=payload.resume_id, job_id=payload.job_id, content=cv))
+    await db.commit()
+
     return {"resume_id": payload.resume_id, "job_id": payload.job_id, "cv": cv}
