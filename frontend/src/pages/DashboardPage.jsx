@@ -4,6 +4,7 @@ import JobsPanel from '../components/JobsPanel.jsx';
 import DetailPanel from '../components/DetailPanel.jsx';
 import ChatPanel from '../components/ChatPanel.jsx';
 import ResumeManager from '../components/ResumeManager.jsx';
+import CvViewer from '../components/CvViewer.jsx';
 import { api } from '../lib/api.js';
 import { DEFAULT_FILTERS, filterAndSortJobs } from '../lib/filters.js';
 
@@ -17,6 +18,7 @@ export default function DashboardPage() {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [filterBarOpen, setFilterBarOpen] = useState(false);
   const [resumeManagerOpen, setResumeManagerOpen] = useState(false);
+  const [generatedCv, setGeneratedCv] = useState(null);
   const [messages, setMessages] = useState([
     { role: 'assistant', text: 'Hi! I can help shortlist roles, tailor your CV, and suggest strongest angles for each application.' },
   ]);
@@ -147,9 +149,9 @@ export default function DashboardPage() {
       return;
     }
     try {
-      await api.generateCv(selectedResumeId, selectedJobId);
-      appendMessage('assistant', 'CV draft generated successfully. The tailored document is ready to review.');
-      alert('CV generated successfully.');
+      const result = await api.generateCv(selectedResumeId, selectedJobId);
+      setGeneratedCv({ job: selectedJob, cv: result.cv });
+      appendMessage('assistant', 'CV draft generated successfully. Opened it for review.');
     } catch (error) {
       alert(error.message || 'Unable to generate CV.');
     }
@@ -239,6 +241,14 @@ export default function DashboardPage() {
           onUpload={handleUploadResume}
           onDelete={handleDeleteResume}
           onClose={() => setResumeManagerOpen(false)}
+        />
+      )}
+
+      {generatedCv && (
+        <CvViewer
+          job={generatedCv.job}
+          cv={generatedCv.cv}
+          onClose={() => setGeneratedCv(null)}
         />
       )}
     </div>

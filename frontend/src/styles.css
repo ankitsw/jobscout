@@ -183,6 +183,25 @@ input, select {
   margin-top: 4px;
 }
 
+.cv-viewer {
+  max-width: 680px;
+}
+
+.cv-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px 18px;
+  max-height: 60vh;
+  overflow-y: auto;
+  margin: 0;
+}
+
 /* ---------- Dashboard page ---------- */
 
 .dashboard-shell {
