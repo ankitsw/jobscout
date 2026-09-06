@@ -3,16 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import JobsPanel from '../components/JobsPanel.jsx';
 import DetailPanel from '../components/DetailPanel.jsx';
 import ChatPanel from '../components/ChatPanel.jsx';
+import ResumeManager from '../components/ResumeManager.jsx';
 import { api } from '../lib/api.js';
-import { scoreFor, isRemote, experienceBucket } from '../lib/format.js';
-
-const DEFAULT_FILTERS = {
-  sortBy: 'score',
-  platform: '',
-  jobType: '',
-  experienceLevel: '',
-  remoteOnly: false,
-};
+import { DEFAULT_FILTERS, filterAndSortJobs } from '../lib/filters.js';
 
 export default function DashboardPage() {
   const [searchParams] = useSearchParams();
@@ -23,6 +16,7 @@ export default function DashboardPage() {
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [filterBarOpen, setFilterBarOpen] = useState(false);
+  const [resumeManagerOpen, setResumeManagerOpen] = useState(false);
   const [messages, setMessages] = useState([
     { role: 'assistant', text: 'Hi! I can help shortlist roles, tailor your CV, and suggest strongest angles for each application.' },
   ]);
@@ -69,30 +63,10 @@ export default function DashboardPage() {
     [jobs, selectedJobId],
   );
 
-  const visibleJobs = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    let list = jobs.filter((job) => {
-      if (filters.platform && job.platform !== filters.platform) return false;
-      if (filters.jobType && job.job_type !== filters.jobType) return false;
-      if (filters.experienceLevel && experienceBucket(job) !== filters.experienceLevel) return false;
-      if (filters.remoteOnly && !isRemote(job)) return false;
-      if (!query) return true;
-      const haystack = `${job.title} ${job.company} ${job.location} ${job.description}`.toLowerCase();
-      return haystack.includes(query);
-    });
-
-    list = list.slice().sort((a, b) => {
-      if (filters.sortBy === 'newest') {
-        return new Date(b.posted_at || 0) - new Date(a.posted_at || 0);
-      }
-      if (filters.sortBy === 'company') {
-        return (a.company || '').localeCompare(b.company || '');
-      }
-      return scoreFor(b) - scoreFor(a);
-    });
-
-    return list;
-  }, [jobs, search, filters]);
+  const visibleJobs = useMemo(
+    () => filterAndSortJobs(jobs, search, filters),
+    [jobs, search, filters],
+  );
 
   // Fetch company profile + salary estimate whenever the selected job changes.
   useEffect(() => {
@@ -208,6 +182,16 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleDeleteResume(resumeId) {
+    try {
+      await api.deleteResume(resumeId);
+      await loadResumes();
+      if (Number(selectedResumeId) === Number(resumeId)) setSelectedResumeId(null);
+    } catch (error) {
+      alert(error.message || 'Unable to delete resume.');
+    }
+  }
+
   return (
     <div className="dashboard-shell">
       <div className="shell">
@@ -217,6 +201,7 @@ export default function DashboardPage() {
             <span>JobScout</span>
           </div>
           <div className="nav-actions">
+            <button className="ghost-button" onClick={() => setResumeManagerOpen(true)}>Resumes</button>
             <button className="ghost-button" onClick={handleRefresh}>Refresh</button>
           </div>
         </header>
@@ -247,6 +232,15 @@ export default function DashboardPage() {
           <ChatPanel messages={messages} onSend={handleSendChat} />
         </main>
       </div>
+
+      {resumeManagerOpen && (
+        <ResumeManager
+          resumes={resumes}
+          onUpload={handleUploadResume}
+          onDelete={handleDeleteResume}
+          onClose={() => setResumeManagerOpen(false)}
+        />
+      )}
     </div>
   );
 }

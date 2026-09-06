@@ -99,6 +99,90 @@ input, select {
   margin: 0;
 }
 
+/* ---------- Modal / resume manager ---------- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 20, 19, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 100;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.modal-header h2 {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.resume-upload-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.resume-upload-form input[type="file"] {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.85rem;
+}
+
+.resume-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.resume-list-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.resume-list-title {
+  font-weight: 500;
+}
+
+.resume-list-preview {
+  font-size: 0.85rem;
+  margin-top: 2px;
+}
+
+.resume-list-date {
+  font-size: 0.78rem;
+  margin-top: 4px;
+}
+
 /* ---------- Dashboard page ---------- */
 
 .dashboard-shell {
@@ -625,7 +709,13 @@ select, input[type="file"] {
   font-size: 0.92rem;
 }
 
-.table-page-shell .search-box {
+.table-page-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.table-page-toolbar .search-box {
   max-width: 360px;
 }
 
@@ -633,14 +723,24 @@ select, input[type="file"] {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 16px;
-  overflow: auto;
+  overflow-x: auto;
+  margin-top: 16px;
 }
 
 table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.92rem;
 }
+
+thead th:nth-child(1) { width: 26%; }
+thead th:nth-child(2) { width: 20%; }
+thead th:nth-child(3) { width: 22%; }
+thead th:nth-child(4) { width: 14%; }
+thead th:nth-child(5) { width: 10%; }
+thead th:nth-child(6) { width: 8%; }
+thead th:nth-child(7) { width: 44px; }
 
 thead th {
   text-align: left;
@@ -658,6 +758,9 @@ tbody td {
   padding: 14px 16px;
   border-bottom: 1px solid var(--line);
   vertical-align: top;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 tbody tr:last-child td {
@@ -676,23 +779,15 @@ tbody tr:hover {
 .job-title-cell {
   font-family: var(--serif);
   font-weight: 500;
-  max-width: 260px;
 }
 
-.description-cell {
-  max-width: 280px;
+.location-cell {
   color: var(--muted);
-  font-size: 0.86rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .company-cell {
   position: relative;
   color: var(--text);
-  border-bottom-style: dashed;
-  white-space: nowrap;
 }
 
 .company-name {

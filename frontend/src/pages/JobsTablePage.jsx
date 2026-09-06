@@ -1,15 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import CompanyTooltip from '../components/CompanyTooltip.jsx';
+import FilterBar from '../components/FilterBar.jsx';
+import ResumeManager from '../components/ResumeManager.jsx';
 import { api } from '../lib/api.js';
 import { scoreFor, formatDate, platformLabel, platformClass } from '../lib/format.js';
+import { DEFAULT_FILTERS, filterAndSortJobs } from '../lib/filters.js';
 
 const HOVER_DELAY_MS = 250;
 
 export default function JobsTablePage() {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState([]);
+  const [resumes, setResumes] = useState([]);
   const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [filterBarOpen, setFilterBarOpen] = useState(false);
+  const [resumeManagerOpen, setResumeManagerOpen] = useState(false);
   const [tooltip, setTooltip] = useState(null); // { name, position, profile }
 
   const profileCache = useRef(new Map());
@@ -20,7 +27,39 @@ export default function JobsTablePage() {
     api.listJobs()
       .then((data) => setJobs(Array.isArray(data) ? data : []))
       .catch(() => setJobs([]));
+    api.listResumes()
+      .then((data) => setResumes(Array.isArray(data) ? data : []))
+      .catch(() => setResumes([]));
   }, []);
+
+  async function loadResumes() {
+    const data = await api.listResumes();
+    setResumes(Array.isArray(data) ? data : []);
+  }
+
+  async function handleUploadResume(file) {
+    if (!file) {
+      alert('Choose a PDF file first.');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      await api.uploadResume(formData);
+      await loadResumes();
+    } catch (error) {
+      alert(error.message || 'Resume upload failed.');
+    }
+  }
+
+  async function handleDeleteResume(resumeId) {
+    try {
+      await api.deleteResume(resumeId);
+      await loadResumes();
+    } catch (error) {
+      alert(error.message || 'Unable to delete resume.');
+    }
+  }
 
   useEffect(() => {
     function hide() {
@@ -32,14 +71,10 @@ export default function JobsTablePage() {
     return () => window.removeEventListener('scroll', hide, true);
   }, []);
 
-  const rows = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return jobs;
-    return jobs.filter((job) => {
-      const haystack = `${job.title} ${job.company} ${job.location} ${job.description}`.toLowerCase();
-      return haystack.includes(query);
-    });
-  }, [jobs, search]);
+  const rows = useMemo(
+    () => filterAndSortJobs(jobs, search, filters),
+    [jobs, search, filters],
+  );
 
   function positionFor(rect) {
     const tooltipWidth = 300;
@@ -93,26 +128,33 @@ export default function JobsTablePage() {
             <span className="brand-mark">J</span>
             <span>JobScout</span>
           </Link>
-          <Link to="/" className="back-link">&larr; Back to dashboard</Link>
+          <div className="nav-actions">
+            <button className="ghost-button" onClick={() => setResumeManagerOpen(true)}>Resumes</button>
+            <Link to="/" className="back-link">&larr; Back to dashboard</Link>
+          </div>
         </header>
 
         <h1>All jobs</h1>
         <p className="page-sub">Hover a company name for a quick research snapshot. Click a row to open it in the dashboard.</p>
 
-        <input
-          className="search-box"
-          type="text"
-          placeholder="Search jobs, skills, companies..."
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
+        <div className="table-page-toolbar">
+          <input
+            className="search-box"
+            type="text"
+            placeholder="Search jobs, skills, companies..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <button className="ghost-button small" onClick={() => setFilterBarOpen((open) => !open)}>Filter</button>
+        </div>
+
+        {filterBarOpen && <FilterBar filters={filters} onChange={setFilters} />}
 
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>Role</th>
-                <th>Description</th>
                 <th>Company</th>
                 <th>Location</th>
                 <th>Platform</th>
@@ -123,16 +165,13 @@ export default function JobsTablePage() {
             </thead>
             <tbody>
               {rows.length === 0 ? (
-                <tr><td colSpan={8}><div className="empty-state">No jobs match the current search.</div></td></tr>
+                <tr><td colSpan={7}><div className="empty-state">No jobs match the current filters.</div></td></tr>
               ) : (
                 rows.map((job) => {
                   const description = (job.description || '').replace(/\s+/g, ' ').trim();
                   return (
-                    <tr key={job.id} onClick={() => navigate(`/?job=${job.id}`)}>
+                    <tr key={job.id} onClick={() => navigate(`/?job=${job.id}`)} title={description}>
                       <td className="job-title-cell">{job.title || 'Untitled role'}</td>
-                      <td className="description-cell" title={description}>
-                        {description || 'No description available.'}
-                      </td>
                       <td
                         className="company-cell"
                         onMouseEnter={(event) => handleMouseEnter(job.company || '', event)}
@@ -140,7 +179,7 @@ export default function JobsTablePage() {
                       >
                         <span className="company-name">{job.company || 'Company'}</span>
                       </td>
-                      <td>{job.location || 'Remote'}</td>
+                      <td className="location-cell">{job.location || 'Remote'}</td>
                       <td><span className={platformClass(job.platform)}>{platformLabel(job.platform)}</span></td>
                       <td>{formatDate(job.posted_at)}</td>
                       <td><span className="score">{scoreFor(job)}%</span></td>
@@ -168,6 +207,15 @@ export default function JobsTablePage() {
       </div>
 
       {tooltip && <CompanyTooltip name={tooltip.name} profile={tooltip.profile} position={tooltip.position} />}
+
+      {resumeManagerOpen && (
+        <ResumeManager
+          resumes={resumes}
+          onUpload={handleUploadResume}
+          onDelete={handleDeleteResume}
+          onClose={() => setResumeManagerOpen(false)}
+        />
+      )}
     </div>
   );
 }
