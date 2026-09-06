@@ -1,10 +1,11 @@
 import logging
 import uuid
 from typing import Any, Literal, cast
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from groq import AsyncGroq
 from app.config import settings
+from app.rate_limit import limiter
 from app.services.agent import run_agent
 
 log = logging.getLogger(__name__)
@@ -30,10 +31,11 @@ class PlainChatRequest(BaseModel):
 
 
 @router.post("/chat")
-async def chat(request: ChatRequest):
-    thread_id = request.thread_id or str(uuid.uuid4())
+@limiter.limit("15/minute")
+async def chat(request: Request, payload: ChatRequest):
+    thread_id = payload.thread_id or str(uuid.uuid4())
     try:
-        response = await run_agent(request.message, thread_id)
+        response = await run_agent(payload.message, thread_id)
     except Exception:
         log.exception("agent chat failed", extra={"thread_id": thread_id})
         raise HTTPException(status_code=500, detail="The assistant hit an error. Please try again.") from None
@@ -41,12 +43,13 @@ async def chat(request: ChatRequest):
 
 
 @router.post("/plain")
-async def plain_chat(request: PlainChatRequest):
-    if not request.messages:
+@limiter.limit("15/minute")
+async def plain_chat(request: Request, payload: PlainChatRequest):
+    if not payload.messages:
         raise HTTPException(status_code=400, detail="messages must not be empty")
     client = AsyncGroq(api_key=settings.api_key)
     messages = [{"role": "system", "content": _PLAIN_CHAT_SYSTEM_PROMPT}]
-    messages += [{"role": m.role, "content": m.content} for m in request.messages]
+    messages += [{"role": m.role, "content": m.content} for m in payload.messages]
     completion = await client.chat.completions.create(
         model="openai/gpt-oss-120b",
         max_tokens=1000,

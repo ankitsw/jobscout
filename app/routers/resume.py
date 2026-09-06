@@ -1,10 +1,11 @@
 # app/routers/resume.py
 import io
 import pdfplumber
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from app.rate_limit import limiter
 from app.services.database import get_db
 from app.models.resume import Resume
 from app.schemas.resume import ResumeOut
@@ -28,7 +29,8 @@ async def get_resume(resume_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/", response_model=ResumeOut)
-async def upload_resume(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def upload_resume(request: Request, file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
     pdf_bytes = await file.read()
     with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
         content = "\n".join(page.extract_text() for page in pdf.pages if page.extract_text())

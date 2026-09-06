@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from app.rate_limit import limiter
 from app.services.database import get_db
 from app.models.job import Job
 from app.schemas.job import JobCreate, JobOut
@@ -18,12 +19,14 @@ async def get_jobs(db: AsyncSession = Depends(get_db)):
     return jobs
 
 @router.get("/company-research", response_model=CompanyProfile)
-async def get_company_research(name: str, db: AsyncSession = Depends(get_db)):
+@limiter.limit("20/minute")
+async def get_company_research(request: Request, name: str, db: AsyncSession = Depends(get_db)):
     return await research_company(name, db)
 
 
 @router.get("/salary-estimate", response_model=SalaryEstimate)
-async def get_salary_estimate_route(company: str, title: str, db: AsyncSession = Depends(get_db)):
+@limiter.limit("20/minute")
+async def get_salary_estimate_route(request: Request, company: str, title: str, db: AsyncSession = Depends(get_db)):
     return await get_salary_estimate(company, title, db)
 
 

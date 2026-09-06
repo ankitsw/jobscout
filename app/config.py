@@ -19,6 +19,15 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     ats_greenhouse_boards: str = "gitlab,asana,discord"
     ats_lever_companies: str = "palantir"
+    # Shared password gating the whole app. Empty disables the gate entirely
+    # (local dev doesn't need to log in). Set this before sharing the live
+    # URL anywhere public - unset, every visitor shares your Groq/Tavily
+    # quota and the resume table with no ownership model.
+    site_access_key: str = ""
+    # Signs the session cookie issued after a successful login. Required
+    # whenever site_access_key is set; a random per-deploy value would log
+    # everyone out on every restart, so this needs to be a stable secret.
+    session_secret: str = "change_me_when_site_access_key_is_set"
 
     @field_validator("database_url")
     @classmethod

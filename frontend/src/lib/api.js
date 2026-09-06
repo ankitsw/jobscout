@@ -33,4 +33,12 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message }),
     }),
+  authStatus: () => request('/auth/status'),
+  login: (password) =>
+    request('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    }),
+  logout: () => request('/auth/logout', { method: 'POST' }),
 };

@@ -30,6 +30,7 @@ mcp==2.1.1
 sentry-sdk[fastapi]>=2.20.0
 
 slowapi==0.1.10
+pyjwt==2.13.0
 
 numpy==2.4.6
 scikit-learn==1.9.0

@@ -39,6 +39,66 @@ input, select {
   font-size: 0.95rem;
 }
 
+/* ---------- Auth gate ---------- */
+
+.auth-gate {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 340px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.auth-card h1 {
+  font-family: var(--serif);
+  font-size: 1.3rem;
+  font-weight: 500;
+  margin: 4px 0 0;
+}
+
+.auth-card .muted {
+  margin: 0 0 8px;
+}
+
+.auth-card input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.auth-card .action-button {
+  width: 100%;
+  justify-content: center;
+}
+
+.auth-card .action-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.auth-error {
+  color: var(--accent-strong);
+  font-size: 0.88rem;
+  margin: 0;
+}
+
 /* ---------- Dashboard page ---------- */
 
 .dashboard-shell {

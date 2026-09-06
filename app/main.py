@@ -7,14 +7,16 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
 from app.config import settings
 from app.logging_config import configure_logging, request_id_context
 from app.rate_limit import limiter
+from app.services.auth import require_access
 from app.services.database import get_db
-from app.routers import job, resume
+from app.routers import auth, job, resume
 from app.routers import match
 from app.routers import cv
 from app.routers import agent
@@ -26,6 +28,7 @@ if settings.sentry_dsn:
 
 app = FastAPI(title="JobScout", version="0.1.0")
 app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
 
 
 async def rate_limit_handler(request: Request, exc: Exception):
@@ -46,12 +49,16 @@ async def request_id_middleware(request: Request, call_next):
     response.headers["X-Request-ID"] = request_id
     return response
 
-app.include_router(job.router)
-app.include_router(resume.router)
-app.include_router(match.router)
-app.include_router(cv.router)
-app.include_router(agent.router)
-app.include_router(hunter.router)
+# auth.router must stay ungated - it's the only way to log in.
+app.include_router(auth.router)
+
+_gate = [Depends(require_access)]
+app.include_router(job.router, dependencies=_gate)
+app.include_router(resume.router, dependencies=_gate)
+app.include_router(match.router, dependencies=_gate)
+app.include_router(cv.router, dependencies=_gate)
+app.include_router(agent.router, dependencies=_gate)
+app.include_router(hunter.router, dependencies=_gate)
 
 # The React app (frontend/) is built to frontend/dist by the Dockerfile's
 # Node stage. Vite's hashed JS/CSS bundles live under dist/assets; index.html
