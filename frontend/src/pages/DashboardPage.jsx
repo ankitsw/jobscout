@@ -190,18 +190,19 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleUploadResume(file) {
+  async function handleUploadResume(file, name = '') {
     if (!file) {
       alert('Choose a PDF file first.');
       return;
     }
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('name', name);
     try {
       const result = await api.uploadResume(formData);
       await loadResumes();
       setSelectedResumeId(Number(result.id));
-      appendMessage('assistant', `Uploaded resume #${result.id}. It is now ready for tailored CV generation.`);
+      appendMessage('assistant', `Uploaded "${result.name || `Resume #${result.id}`}". It is now ready for tailored CV generation.`);
     } catch (error) {
       alert(error.message || 'Resume upload failed.');
     }
@@ -214,6 +215,15 @@ export default function DashboardPage() {
       if (Number(selectedResumeId) === Number(resumeId)) setSelectedResumeId(null);
     } catch (error) {
       alert(error.message || 'Unable to delete resume.');
+    }
+  }
+
+  async function handleRenameResume(resumeId, name) {
+    try {
+      await api.renameResume(resumeId, name);
+      await loadResumes();
+    } catch (error) {
+      alert(error.message || 'Unable to rename resume.');
     }
   }
 
@@ -265,6 +275,7 @@ export default function DashboardPage() {
           resumes={resumes}
           onUpload={handleUploadResume}
           onDelete={handleDeleteResume}
+          onRename={handleRenameResume}
           onClose={() => setResumeManagerOpen(false)}
         />
       )}

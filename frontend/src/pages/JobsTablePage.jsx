@@ -37,13 +37,14 @@ export default function JobsTablePage() {
     setResumes(Array.isArray(data) ? data : []);
   }
 
-  async function handleUploadResume(file) {
+  async function handleUploadResume(file, name = '') {
     if (!file) {
       alert('Choose a PDF file first.');
       return;
     }
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('name', name);
     try {
       await api.uploadResume(formData);
       await loadResumes();
@@ -58,6 +59,15 @@ export default function JobsTablePage() {
       await loadResumes();
     } catch (error) {
       alert(error.message || 'Unable to delete resume.');
+    }
+  }
+
+  async function handleRenameResume(resumeId, name) {
+    try {
+      await api.renameResume(resumeId, name);
+      await loadResumes();
+    } catch (error) {
+      alert(error.message || 'Unable to rename resume.');
     }
   }
 
@@ -213,6 +223,7 @@ export default function JobsTablePage() {
           resumes={resumes}
           onUpload={handleUploadResume}
           onDelete={handleDeleteResume}
+          onRename={handleRenameResume}
           onClose={() => setResumeManagerOpen(false)}
         />
       )}

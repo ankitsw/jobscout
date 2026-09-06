@@ -19,6 +19,12 @@ export const api = {
   listResumes: () => request('/resumes/'),
   uploadResume: (formData) => request('/resumes/', { method: 'POST', body: formData }),
   deleteResume: (resumeId) => request(`/resumes/${resumeId}`, { method: 'DELETE' }),
+  renameResume: (resumeId, name) =>
+    request(`/resumes/${resumeId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    }),
   companyResearch: (name) => request(`/jobs/company-research?name=${encodeURIComponent(name)}`),
   salaryEstimate: (company, title) =>
     request(`/jobs/salary-estimate?company=${encodeURIComponent(company)}&title=${encodeURIComponent(title)}`),

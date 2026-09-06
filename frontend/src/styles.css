@@ -139,11 +139,21 @@ input, select {
 
 .resume-upload-form {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: center;
   padding-bottom: 16px;
   margin-bottom: 16px;
   border-bottom: 1px solid var(--line);
+}
+
+.resume-name-input {
+  flex-basis: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+  color: var(--text);
 }
 
 .resume-upload-form input[type="file"] {
@@ -171,6 +181,35 @@ input, select {
 
 .resume-list-title {
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rename-link {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 400;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.rename-link:hover {
+  color: var(--accent-strong);
+}
+
+.resume-rename-input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text);
+  font-weight: 500;
+  font-size: 0.95rem;
 }
 
 .resume-list-preview {

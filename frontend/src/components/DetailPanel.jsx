@@ -96,7 +96,7 @@ export default function DetailPanel({
         <select value={selectedResumeId ?? ''} onChange={(event) => onSelectResume(event.target.value ? Number(event.target.value) : null)}>
           <option value="">Select a resume</option>
           {resumes.map((resume) => (
-            <option key={resume.id} value={resume.id}>Resume #{resume.id}</option>
+            <option key={resume.id} value={resume.id}>{resume.name || `Resume #${resume.id}`}</option>
           ))}
         </select>
 
