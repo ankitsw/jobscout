@@ -56,7 +56,11 @@ export default function DashboardPage() {
     setSelectedResumeId((current) => {
       if (current) return current;
       const lastId = getLastResumeId();
-      return lastId && list.some((resume) => Number(resume.id) === lastId) ? lastId : current;
+      if (lastId && list.some((resume) => Number(resume.id) === lastId)) return lastId;
+      // No remembered choice (or it no longer exists) - default to the most
+      // recently uploaded resume (list is already newest-first) rather than
+      // leaving scores blank until someone manually picks one.
+      return list[0]?.id ?? current;
     });
   }
 
