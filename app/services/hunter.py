@@ -52,7 +52,12 @@ KEYWORDS = [
 ]
 
 SEARCH_PROFILES = [
-    {"keyword": keyword, "location": location}
+    # LinkedIn's own experience-level filter (f_E) - "internship" and "entry"
+    # roughly cover 0-2 years. This narrows what LinkedIn returns in the
+    # first place; _is_junior_or_internship() below still re-checks every
+    # saved job (from every source, not just LinkedIn) against the actual
+    # extracted years, since this filter alone can't be trusted precisely.
+    {"keyword": keyword, "location": location, "experience_level": "internship,entry"}
     for keyword in KEYWORDS
     for location in LOCATIONS
 ]
@@ -75,6 +80,27 @@ def _is_relevant(title: str) -> bool:
     if any(kw in t for kw in _EXCLUDE_TITLE_KEYWORDS):
         return False
     return any(kw in t for kw in _TITLE_KEYWORDS)
+
+
+# LinkedIn's own f_E filter narrows what comes back from that one source,
+# but ATS/Hirist/Indeed have no equivalent, and LinkedIn's own bucketing is
+# coarse. This is the actual, uniform 0-2-years-or-internship gate applied
+# to every job from every source after experience_required/job_type are
+# extracted below.
+_JUNIOR_TITLE_HINTS = re.compile(
+    r"\b(intern(?:ship)?|junior|jr\.?|entry[\s-]?level|fresher|graduate\s+(?:engineer|trainee|program)|trainee)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_junior_or_internship(title: str, experience_required: str, job_type: str) -> bool:
+    if job_type == "internship":
+        return True
+    if experience_required:
+        match = re.match(r"(\d{1,2})", experience_required)
+        if match:
+            return int(match.group(1)) <= 2
+    return bool(_JUNIOR_TITLE_HINTS.search(title or ""))
 
 
 # Every source (LinkedIn's search results, Greenhouse/Lever's APIs) hands
@@ -252,6 +278,10 @@ async def scrape_jobs() -> int:
                 job_data["workplace_type"] = (
                     job_data.get("workplace_type") or workplace_type_hint or _extract_workplace_type(job_text)
                 )
+                if not _is_junior_or_internship(
+                    job_data.get("title", ""), job_data["experience_required"], job_data["job_type"]
+                ):
+                    continue
                 job_data["embedding"] = embed(job_text)
                 try:
                     job_data["flagged"] = await is_likely_injection(job_text)
