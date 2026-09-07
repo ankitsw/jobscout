@@ -93,9 +93,27 @@ _JUNIOR_TITLE_HINTS = re.compile(
 )
 
 
-def _is_junior_or_internship(title: str, experience_required: str, job_type: str) -> bool:
+# Only Internshala prepends this "Stipend: ..." line to the description
+# (app/services/sources/internshala.py); no other source exposes stipend at
+# all. An internship whose stipend can't be confirmed above the floor is
+# rejected rather than assumed to qualify.
+_STIPEND_MIN_MONTHLY = 25000
+_STIPEND_LINE_RE = re.compile(r"^Stipend:\s*(.+)$", re.IGNORECASE | re.MULTILINE)
+_STIPEND_NUMBER_RE = re.compile(r"[\d,]{3,}")
+
+
+def _extract_stipend(description: str) -> int | None:
+    match = _STIPEND_LINE_RE.search(description or "")
+    if not match:
+        return None
+    numbers = [int(n.replace(",", "")) for n in _STIPEND_NUMBER_RE.findall(match.group(1))]
+    return max(numbers) if numbers else None
+
+
+def _is_junior_or_internship(title: str, experience_required: str, job_type: str, description: str = "") -> bool:
     if job_type == "internship":
-        return True
+        stipend = _extract_stipend(description)
+        return stipend is not None and stipend > _STIPEND_MIN_MONTHLY
     if experience_required:
         match = re.match(r"(\d{1,2})", experience_required)
         if match:
@@ -279,7 +297,8 @@ async def scrape_jobs() -> int:
                     job_data.get("workplace_type") or workplace_type_hint or _extract_workplace_type(job_text)
                 )
                 if not _is_junior_or_internship(
-                    job_data.get("title", ""), job_data["experience_required"], job_data["job_type"]
+                    job_data.get("title", ""), job_data["experience_required"], job_data["job_type"],
+                    job_data.get("description", ""),
                 ):
                     continue
                 job_data["embedding"] = embed(job_text)
