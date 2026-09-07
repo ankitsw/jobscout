@@ -7,6 +7,7 @@ import ResumeManager from '../components/ResumeManager.jsx';
 import CvViewer from '../components/CvViewer.jsx';
 import { api } from '../lib/api.js';
 import { DEFAULT_FILTERS, filterAndSortJobs } from '../lib/filters.js';
+import { getLastResumeId, setLastResumeId } from '../lib/lastResume.js';
 
 export default function DashboardPage() {
   const [searchParams] = useSearchParams();
@@ -50,7 +51,18 @@ export default function DashboardPage() {
 
   async function loadResumes() {
     const data = await api.listResumes();
-    setResumes(Array.isArray(data) ? data : []);
+    const list = Array.isArray(data) ? data : [];
+    setResumes(list);
+    setSelectedResumeId((current) => {
+      if (current) return current;
+      const lastId = getLastResumeId();
+      return lastId && list.some((resume) => Number(resume.id) === lastId) ? lastId : current;
+    });
+  }
+
+  function handleSelectResume(id) {
+    setSelectedResumeId(id);
+    setLastResumeId(id);
   }
 
   useEffect(() => {
@@ -227,7 +239,7 @@ export default function DashboardPage() {
     try {
       const result = await api.uploadResume(formData);
       await loadResumes();
-      setSelectedResumeId(Number(result.id));
+      handleSelectResume(Number(result.id));
       appendMessage('assistant', `Uploaded "${result.name || `Resume #${result.id}`}". It is now ready for tailored CV generation.`);
     } catch (error) {
       alert(error.message || 'Resume upload failed.');
@@ -238,7 +250,7 @@ export default function DashboardPage() {
     try {
       await api.deleteResume(resumeId);
       await loadResumes();
-      if (Number(selectedResumeId) === Number(resumeId)) setSelectedResumeId(null);
+      if (Number(selectedResumeId) === Number(resumeId)) handleSelectResume(null);
     } catch (error) {
       alert(error.message || 'Unable to delete resume.');
     }
@@ -286,7 +298,7 @@ export default function DashboardPage() {
             detailExtras={detailExtras}
             resumes={resumes}
             selectedResumeId={selectedResumeId}
-            onSelectResume={setSelectedResumeId}
+            onSelectResume={handleSelectResume}
             onUploadResume={handleUploadResume}
             onGenerateCv={handleGenerateCv}
             hasCv={Boolean(savedCv)}

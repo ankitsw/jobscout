@@ -6,6 +6,7 @@ import ResumeManager from '../components/ResumeManager.jsx';
 import { api } from '../lib/api.js';
 import { matchScoreFor, formatDate, platformLabel, platformClass } from '../lib/format.js';
 import { DEFAULT_FILTERS, filterAndSortJobs } from '../lib/filters.js';
+import { getLastResumeId, setLastResumeId } from '../lib/lastResume.js';
 
 const HOVER_DELAY_MS = 250;
 
@@ -29,14 +30,23 @@ export default function JobsTablePage() {
     api.listJobs()
       .then((data) => setJobs(Array.isArray(data) ? data : []))
       .catch(() => setJobs([]));
-    api.listResumes()
-      .then((data) => setResumes(Array.isArray(data) ? data : []))
-      .catch(() => setResumes([]));
+    loadResumes();
   }, []);
 
   async function loadResumes() {
     const data = await api.listResumes();
-    setResumes(Array.isArray(data) ? data : []);
+    const list = Array.isArray(data) ? data : [];
+    setResumes(list);
+    setSelectedResumeId((current) => {
+      if (current) return current;
+      const lastId = getLastResumeId();
+      return lastId && list.some((resume) => Number(resume.id) === lastId) ? lastId : current;
+    });
+  }
+
+  function handleSelectResume(id) {
+    setSelectedResumeId(id);
+    setLastResumeId(id);
   }
 
   async function handleUploadResume(file, name = '') {
@@ -59,6 +69,7 @@ export default function JobsTablePage() {
     try {
       await api.deleteResume(resumeId);
       await loadResumes();
+      if (Number(selectedResumeId) === Number(resumeId)) handleSelectResume(null);
     } catch (error) {
       alert(error.message || 'Unable to delete resume.');
     }
@@ -181,7 +192,7 @@ export default function JobsTablePage() {
           <select
             className="resume-match-select"
             value={selectedResumeId ?? ''}
-            onChange={(event) => setSelectedResumeId(event.target.value ? Number(event.target.value) : null)}
+            onChange={(event) => handleSelectResume(event.target.value ? Number(event.target.value) : null)}
           >
             <option value="">Match against a resume…</option>
             {resumes.map((resume) => (
