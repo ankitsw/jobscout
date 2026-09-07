@@ -513,6 +513,12 @@ input, select {
   border-color: var(--ink);
 }
 
+.match-score-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: -6px 0 12px;
+}
+
 .job-list {
   display: flex;
   flex-direction: column;
@@ -597,6 +603,12 @@ input, select {
   font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
+}
+
+.score.score-empty {
+  background: var(--panel-2);
+  color: var(--muted);
+  cursor: help;
 }
 
 .detail-header-side {
@@ -764,6 +776,46 @@ select, input[type="file"] {
   border: 1px solid var(--line);
 }
 
+.chat-bubble p {
+  margin: 0 0 8px;
+}
+
+.chat-bubble > *:last-child {
+  margin-bottom: 0;
+}
+
+.chat-bubble ul,
+.chat-bubble ol {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+.chat-bubble li {
+  margin-bottom: 2px;
+}
+
+.chat-bubble strong {
+  font-weight: 600;
+}
+
+.chat-bubble a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.chat-bubble table {
+  border-collapse: collapse;
+  margin: 0 0 8px;
+  font-size: 0.86rem;
+}
+
+.chat-bubble th,
+.chat-bubble td {
+  border: 1px solid var(--line);
+  padding: 4px 8px;
+  text-align: left;
+}
+
 .chat-input-wrap {
   display: flex;
   gap: 8px;
@@ -879,6 +931,15 @@ select, input[type="file"] {
 
 .table-page-toolbar .search-box {
   max-width: 360px;
+}
+
+.resume-match-select {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--text);
+  max-width: 220px;
 }
 
 .table-wrap {

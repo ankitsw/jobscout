@@ -4,7 +4,7 @@ import CompanyTooltip from '../components/CompanyTooltip.jsx';
 import FilterBar from '../components/FilterBar.jsx';
 import ResumeManager from '../components/ResumeManager.jsx';
 import { api } from '../lib/api.js';
-import { scoreFor, formatDate, platformLabel, platformClass } from '../lib/format.js';
+import { matchScoreFor, formatDate, platformLabel, platformClass } from '../lib/format.js';
 import { DEFAULT_FILTERS, filterAndSortJobs } from '../lib/filters.js';
 
 const HOVER_DELAY_MS = 250;
@@ -13,6 +13,8 @@ export default function JobsTablePage() {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState([]);
   const [resumes, setResumes] = useState([]);
+  const [selectedResumeId, setSelectedResumeId] = useState(null);
+  const [matchScores, setMatchScores] = useState({});
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [filterBarOpen, setFilterBarOpen] = useState(false);
@@ -91,9 +93,21 @@ export default function JobsTablePage() {
   }, []);
 
   const rows = useMemo(
-    () => filterAndSortJobs(jobs, search, filters),
-    [jobs, search, filters],
+    () => filterAndSortJobs(jobs, search, filters, matchScores),
+    [jobs, search, filters, matchScores],
   );
+
+  useEffect(() => {
+    if (!selectedResumeId) {
+      setMatchScores({});
+      return;
+    }
+    let cancelled = false;
+    api.quickMatchScores(selectedResumeId)
+      .then((scores) => { if (!cancelled) setMatchScores(scores || {}); })
+      .catch(() => { if (!cancelled) setMatchScores({}); });
+    return () => { cancelled = true; };
+  }, [selectedResumeId]);
 
   function positionFor(rect) {
     const tooltipWidth = 300;
@@ -164,6 +178,16 @@ export default function JobsTablePage() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
+          <select
+            className="resume-match-select"
+            value={selectedResumeId ?? ''}
+            onChange={(event) => setSelectedResumeId(event.target.value ? Number(event.target.value) : null)}
+          >
+            <option value="">Match against a resume…</option>
+            {resumes.map((resume) => (
+              <option key={resume.id} value={resume.id}>{resume.name || `Resume #${resume.id}`}</option>
+            ))}
+          </select>
           <button className="ghost-button small" onClick={() => setFilterBarOpen((open) => !open)}>Filter</button>
         </div>
 
@@ -201,7 +225,16 @@ export default function JobsTablePage() {
                       <td className="location-cell">{job.location || 'Remote'}</td>
                       <td><span className={platformClass(job.platform)}>{platformLabel(job.platform)}</span></td>
                       <td>{formatDate(job.posted_at)}</td>
-                      <td><span className="score">{scoreFor(job)}%</span></td>
+                      <td>
+                        {(() => {
+                          const score = matchScoreFor(job, matchScores);
+                          return (
+                            <span className={`score${score == null ? ' score-empty' : ''}`} title={score == null ? 'Pick a resume to see match score' : undefined}>
+                              {score == null ? '—' : `${score}%`}
+                            </span>
+                          );
+                        })()}
+                      </td>
                       <td>
                         <div className="row-actions">
                           {job.url && (

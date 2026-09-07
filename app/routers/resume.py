@@ -1,12 +1,11 @@
 # app/routers/resume.py
-import io
-import pdfplumber
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.rate_limit import limiter
 from app.services.database import get_db
+from app.services.pdf_extraction import extract_resume_text
 from app.models.resume import Resume
 from app.schemas.resume import ResumeOut, ResumeRename
 
@@ -37,8 +36,7 @@ async def upload_resume(
     db: AsyncSession = Depends(get_db),
 ):
     pdf_bytes = await file.read()
-    with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
-        content = "\n".join(page.extract_text() for page in pdf.pages if page.extract_text())
+    content = extract_resume_text(pdf_bytes)
     if not content.strip():
         raise HTTPException(status_code=422, detail="Could not extract text from PDF")
     # Fall back to the uploaded filename (minus extension) so a resume is

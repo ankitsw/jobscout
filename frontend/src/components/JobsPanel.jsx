@@ -12,6 +12,7 @@ export default function JobsPanel({
   onFiltersChange,
   filterBarOpen,
   onToggleFilterBar,
+  matchScores,
 }) {
   return (
     <aside className="panel jobs-panel">
@@ -33,6 +34,10 @@ export default function JobsPanel({
 
       {filterBarOpen && <FilterBar filters={filters} onChange={onFiltersChange} />}
 
+      {(!matchScores || Object.keys(matchScores).length === 0) && (
+        <div className="match-score-hint">Select a resume below to see real match scores for each job.</div>
+      )}
+
       <div className="job-list">
         {visibleJobs.length === 0 ? (
           <div className="job-card"><div className="muted">No jobs match the current filters.</div></div>
@@ -43,6 +48,7 @@ export default function JobsPanel({
               job={job}
               isActive={String(job.id) === String(selectedJobId)}
               onSelect={onSelectJob}
+              matchScores={matchScores}
             />
           ))
         )}

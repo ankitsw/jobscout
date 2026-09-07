@@ -1,6 +1,7 @@
-import { scoreFor, formatDate } from '../lib/format.js';
+import { matchScoreFor, formatDate } from '../lib/format.js';
 
-export default function JobCard({ job, isActive, onSelect }) {
+export default function JobCard({ job, isActive, onSelect, matchScores }) {
+  const score = matchScoreFor(job, matchScores);
   return (
     <div
       className={`job-card${isActive ? ' active' : ''}`}
@@ -11,7 +12,9 @@ export default function JobCard({ job, isActive, onSelect }) {
           <div className="company">{job.company || 'Company'}</div>
           <div className="job-title">{job.title || 'Untitled role'}</div>
         </div>
-        <div className="score">{scoreFor(job)}%</div>
+        <div className={`score${score == null ? ' score-empty' : ''}`} title={score == null ? 'Select a resume to see match score' : undefined}>
+          {score == null ? '—' : `${score}%`}
+        </div>
       </div>
       <div className="meta-row">
         <span className="chip">{job.location || 'Remote'}</span>

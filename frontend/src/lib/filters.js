@@ -1,4 +1,4 @@
-import { scoreFor, isRemote, experienceBucket } from './format.js';
+import { matchScoreFor, isRemote, experienceBucket } from './format.js';
 
 export const DEFAULT_FILTERS = {
   sortBy: 'score',
@@ -8,7 +8,7 @@ export const DEFAULT_FILTERS = {
   remoteOnly: false,
 };
 
-export function filterAndSortJobs(jobs, search, filters) {
+export function filterAndSortJobs(jobs, search, filters, matchScores) {
   const query = search.trim().toLowerCase();
   let list = jobs.filter((job) => {
     if (filters.platform && job.platform !== filters.platform) return false;
@@ -27,7 +27,15 @@ export function filterAndSortJobs(jobs, search, filters) {
     if (filters.sortBy === 'company') {
       return (a.company || '').localeCompare(b.company || '');
     }
-    return scoreFor(b) - scoreFor(a);
+    // "Best match" needs a selected resume to mean anything - without one,
+    // there are no scores to sort by, so leave the list in whatever order
+    // it arrived in rather than sorting on a made-up number.
+    const scoreA = matchScoreFor(a, matchScores);
+    const scoreB = matchScoreFor(b, matchScores);
+    if (scoreA == null && scoreB == null) return 0;
+    if (scoreA == null) return 1;
+    if (scoreB == null) return -1;
+    return scoreB - scoreA;
   });
 
   return list;

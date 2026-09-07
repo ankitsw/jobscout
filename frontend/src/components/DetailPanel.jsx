@@ -1,4 +1,4 @@
-import { scoreFor, formatLakhs } from '../lib/format.js';
+import { matchScoreFor, formatLakhs } from '../lib/format.js';
 
 export default function DetailPanel({
   job,
@@ -11,6 +11,7 @@ export default function DetailPanel({
   hasCv,
   onViewCv,
   onDeleteJob,
+  matchScores,
 }) {
   if (!job) {
     return (
@@ -28,6 +29,7 @@ export default function DetailPanel({
 
   const { classification, rating, reviewsCount, salary, description } = detailExtras;
   const showMeta = Boolean(classification) || rating != null;
+  const score = matchScoreFor(job, matchScores);
 
   return (
     <section className="panel detail-panel">
@@ -47,7 +49,12 @@ export default function DetailPanel({
           )}
         </div>
         <div className="detail-header-side">
-          <div className="score">{scoreFor(job)}%</div>
+          <div
+            className={`score${score == null ? ' score-empty' : ''}`}
+            title={score == null ? 'Select a resume to see a match score' : undefined}
+          >
+            {score == null ? '—' : `${score}%`}
+          </div>
           <button
             className="icon-button danger"
             title="Delete this job"

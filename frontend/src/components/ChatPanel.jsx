@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export default function ChatPanel({ messages, onSend }) {
   const [input, setInput] = useState('');
@@ -25,7 +27,13 @@ export default function ChatPanel({ messages, onSend }) {
 
       <div className="chat-thread" ref={threadRef}>
         {messages.map((message, index) => (
-          <div className={`chat-bubble ${message.role}`} key={index}>{message.text}</div>
+          <div className={`chat-bubble ${message.role}`} key={index}>
+            {message.role === 'assistant' ? (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.text}</ReactMarkdown>
+            ) : (
+              message.text
+            )}
+          </div>
         ))}
       </div>
 

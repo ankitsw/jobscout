@@ -20,6 +20,7 @@ export default function DashboardPage() {
   const [resumeManagerOpen, setResumeManagerOpen] = useState(false);
   const [savedCv, setSavedCv] = useState(null); // { cv } for the current job+resume pair, if one has been generated
   const [cvViewerOpen, setCvViewerOpen] = useState(false);
+  const [matchScores, setMatchScores] = useState({}); // { [jobId]: 0-100 }, only populated once a resume is selected
   const [messages, setMessages] = useState([
     { role: 'assistant', text: 'Hi! I can help shortlist roles, tailor your CV, and suggest strongest angles for each application.' },
   ]);
@@ -67,9 +68,24 @@ export default function DashboardPage() {
   );
 
   const visibleJobs = useMemo(
-    () => filterAndSortJobs(jobs, search, filters),
-    [jobs, search, filters],
+    () => filterAndSortJobs(jobs, search, filters, matchScores),
+    [jobs, search, filters, matchScores],
   );
+
+  // Real match scores are resume-scoped - fetch (or clear) the whole set
+  // whenever the selected resume changes, rather than faking a score with
+  // no resume behind it.
+  useEffect(() => {
+    if (!selectedResumeId) {
+      setMatchScores({});
+      return;
+    }
+    let cancelled = false;
+    api.quickMatchScores(selectedResumeId)
+      .then((scores) => { if (!cancelled) setMatchScores(scores || {}); })
+      .catch(() => { if (!cancelled) setMatchScores({}); });
+    return () => { cancelled = true; };
+  }, [selectedResumeId]);
 
   // A previously generated CV is tied to one (resume, job) pair - reload it
   // (or clear it) whenever either side of that pair changes, so switching
@@ -262,6 +278,7 @@ export default function DashboardPage() {
             onFiltersChange={setFilters}
             filterBarOpen={filterBarOpen}
             onToggleFilterBar={() => setFilterBarOpen((open) => !open)}
+            matchScores={matchScores}
           />
 
           <DetailPanel
@@ -275,6 +292,7 @@ export default function DashboardPage() {
             hasCv={Boolean(savedCv)}
             onViewCv={handleViewCv}
             onDeleteJob={handleDeleteJob}
+            matchScores={matchScores}
           />
 
           <ChatPanel messages={messages} onSend={handleSendChat} />

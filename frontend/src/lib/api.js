@@ -26,6 +26,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     }),
+  quickMatchScores: (resumeId) => request(`/match/quick?resume_id=${resumeId}`),
   companyResearch: (name) => request(`/jobs/company-research?name=${encodeURIComponent(name)}`),
   salaryEstimate: (company, title) =>
     request(`/jobs/salary-estimate?company=${encodeURIComponent(company)}&title=${encodeURIComponent(title)}`),

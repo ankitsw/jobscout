@@ -1,6 +1,10 @@
-export function scoreFor(job) {
-  const len = (job.title || '').length + (job.company || '').length;
-  return Math.min(98, Math.max(65, Math.round(72 + (len % 18))));
+// Real match scores come from GET /match/quick, keyed by job id, and only
+// exist once a resume is selected - there is no meaningful "match" without
+// something to match against. Returns null (not a fabricated number) when
+// no score is available yet.
+export function matchScoreFor(job, matchScores) {
+  const score = matchScores?.[job.id];
+  return typeof score === 'number' ? score : null;
 }
 
 export function isRemote(job) {
